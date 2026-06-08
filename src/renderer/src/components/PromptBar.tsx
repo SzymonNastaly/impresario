@@ -54,7 +54,7 @@ export function PromptBar({
     if (!tpl) return
     setPrompt(tpl.config.prompt)
     setModel(tpl.config.model)
-    setParams(tpl.config.params ?? {})
+    setParams(tpl.config.params)
   }
 
   async function submit(): Promise<void> {
@@ -65,6 +65,7 @@ export function PromptBar({
     if (!canSubmit) return
     const text = prompt.trim()
     setPrompt('')
+    setParams({})
     await onGenerate({ prompt: text, model, ...params })
   }
 

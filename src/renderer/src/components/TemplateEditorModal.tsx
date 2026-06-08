@@ -75,6 +75,7 @@ export function TemplateEditorModal({
 }: TemplateEditorModalProps): React.JSX.Element {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const canSave = draft !== null && draft.name.trim().length > 0 && draft.prompt.trim().length > 0
 
@@ -84,8 +85,9 @@ export function TemplateEditorModal({
   }
 
   async function save(): Promise<void> {
-    if (!draft || !canSave) return
+    if (!draft || !canSave || saving) return
     const input = draftToCreate(draft)
+    setSaving(true)
     try {
       if (draft.id) {
         await window.api.templates.update(draft.id, { name: input.name, config: input.config })
@@ -95,12 +97,18 @@ export function TemplateEditorModal({
       reset()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save template.')
+    } finally {
+      setSaving(false)
     }
   }
 
   async function remove(id: string): Promise<void> {
-    await window.api.templates.delete(id)
-    if (draft?.id === id) reset()
+    try {
+      await window.api.templates.delete(id)
+      if (draft?.id === id) reset()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete template.')
+    }
   }
 
   async function exportOne(id: string): Promise<void> {
@@ -163,9 +171,9 @@ export function TemplateEditorModal({
               />
             </div>
             <div className="grid gap-1.5">
-              <Label>Model</Label>
+              <Label htmlFor="tpl-model">Model</Label>
               <Select value={draft.model} onValueChange={(v) => setDraft({ ...draft, model: v })}>
-                <SelectTrigger size="sm" className="w-full">
+                <SelectTrigger id="tpl-model" size="sm" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -202,8 +210,8 @@ export function TemplateEditorModal({
               <Button variant="outline" onClick={reset}>
                 Cancel
               </Button>
-              <Button disabled={!canSave} onClick={() => void save()}>
-                {draft.id ? 'Save' : 'Create'}
+              <Button disabled={!canSave || saving} onClick={() => void save()}>
+                {saving ? 'Saving…' : draft.id ? 'Save' : 'Create'}
               </Button>
             </DialogFooter>
           </div>
@@ -239,7 +247,10 @@ export function TemplateEditorModal({
                         variant="ghost"
                         size="icon-xs"
                         title="Edit"
-                        onClick={() => setDraft(draftFromTemplate(t))}
+                        onClick={() => {
+                          setDraft(draftFromTemplate(t))
+                          setError(null)
+                        }}
                       >
                         <Pencil />
                       </Button>
@@ -260,7 +271,13 @@ export function TemplateEditorModal({
               <Button variant="outline" size="sm" onClick={() => void importOne()}>
                 <Upload /> Import
               </Button>
-              <Button size="sm" onClick={() => setDraft(emptyDraft())}>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setDraft(emptyDraft())
+                  setError(null)
+                }}
+              >
                 New template
               </Button>
             </div>
