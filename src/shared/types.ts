@@ -36,6 +36,46 @@ export interface GenerateImageRequest {
   size?: string
 }
 
+// ---- Templates ----------------------------------------------------------
+// A template is a reusable prompt + model preset. `kind` discriminates the
+// payload stored in `config` (a JSON column), leaving room to add future
+// kinds (e.g. multi-step) without a schema migration.
+export type TemplateKind = 'single-prompt' // future: | 'multi-step'
+
+export interface SinglePromptConfig {
+  prompt: string
+  model: string
+  params: {
+    numberOfImages?: number
+    size?: string
+  }
+}
+
+// Discriminated by Template.kind. Becomes a union as kinds are added.
+export type TemplateConfig = SinglePromptConfig
+
+export interface Template {
+  id: string
+  name: string
+  kind: TemplateKind
+  config: TemplateConfig
+  createdAt: number
+  updatedAt: number
+}
+
+/** Inputs for creating a template; main assigns id/timestamps. */
+export interface TemplateCreate {
+  name: string
+  kind: TemplateKind
+  config: TemplateConfig
+}
+
+/** Partial update; main bumps updatedAt. */
+export interface TemplateUpdate {
+  name?: string
+  config?: TemplateConfig
+}
+
 export interface KeyStatus {
   /** Whether a key is currently stored. */
   hasKey: boolean
@@ -63,5 +103,13 @@ export const IPC = {
   generationsDelete: 'generations:delete',
   generateImage: 'generate:image',
   // main -> renderer broadcast when the store changes
-  generationsChanged: 'generations:changed'
+  generationsChanged: 'generations:changed',
+  // templates
+  templatesGetAll: 'templates:get-all',
+  templatesCreate: 'templates:create',
+  templatesUpdate: 'templates:update',
+  templatesDelete: 'templates:delete',
+  templatesExport: 'templates:export',
+  templatesImport: 'templates:import',
+  templatesChanged: 'templates:changed'
 } as const
