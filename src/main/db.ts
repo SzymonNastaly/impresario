@@ -1,131 +1,51 @@
 import { join } from 'path'
 import { app } from 'electron'
 import Database from 'better-sqlite3'
-import type { Generation, GenerationStatus } from '@shared/types'
+import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import { eq, desc } from 'drizzle-orm'
+import type { Generation } from '@shared/types'
+import { generations } from './schema'
 
-let db: Database.Database
-
-interface GenerationRow {
-  id: string
-  type: string
-  prompt: string
-  model: string
-  status: string
-  params: string
-  assets: string
-  error: string | null
-  created_at: number
-  updated_at: number
-}
-
-function rowToGeneration(row: GenerationRow): Generation {
-  return {
-    id: row.id,
-    type: row.type as Generation['type'],
-    prompt: row.prompt,
-    model: row.model,
-    status: row.status as GenerationStatus,
-    params: safeParse(row.params, {}),
-    assets: safeParse(row.assets, []),
-    error: row.error,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  }
-}
-
-function safeParse<T>(value: string, fallback: T): T {
-  try {
-    return JSON.parse(value) as T
-  } catch {
-    return fallback
-  }
-}
+let db: BetterSQLite3Database<{ generations: typeof generations }>
 
 /** Open the database and run migrations. Call once, after app is ready. */
 export function initDb(): void {
   const dbPath = join(app.getPath('userData'), 'impresario.db')
-  db = new Database(dbPath)
-  db.pragma('journal_mode = WAL')
-  db.pragma('foreign_keys = ON')
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS generations (
-      id          TEXT PRIMARY KEY,
-      type        TEXT NOT NULL,
-      prompt      TEXT NOT NULL,
-      model       TEXT NOT NULL,
-      status      TEXT NOT NULL,
-      params      TEXT NOT NULL DEFAULT '{}',
-      assets      TEXT NOT NULL DEFAULT '[]',
-      error       TEXT,
-      created_at  INTEGER NOT NULL,
-      updated_at  INTEGER NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_generations_created_at
-      ON generations (created_at DESC);
-  `)
+  const sqlite = new Database(dbPath)
+  sqlite.pragma('journal_mode = WAL')
+  sqlite.pragma('foreign_keys = ON')
+  db = drizzle(sqlite, { schema: { generations } })
+
+  // Migration SQL lives in ./drizzle (next to package.json), which ships inside
+  // the app bundle, so the same path resolves in dev and packaged builds.
+  migrate(db, { migrationsFolder: join(app.getAppPath(), 'drizzle') })
 }
 
 export function getAllGenerations(): Generation[] {
-  const rows = db
-    .prepare('SELECT * FROM generations ORDER BY created_at DESC')
-    .all() as GenerationRow[]
-  return rows.map(rowToGeneration)
+  return db.select().from(generations).orderBy(desc(generations.createdAt)).all()
 }
 
 export function getGeneration(id: string): Generation | undefined {
-  const row = db.prepare('SELECT * FROM generations WHERE id = ?').get(id) as
-    | GenerationRow
-    | undefined
-  return row ? rowToGeneration(row) : undefined
+  return db.select().from(generations).where(eq(generations.id, id)).get()
 }
 
 export function insertGeneration(gen: Generation): Generation {
-  db.prepare(
-    `INSERT INTO generations
-       (id, type, prompt, model, status, params, assets, error, created_at, updated_at)
-     VALUES
-       (@id, @type, @prompt, @model, @status, @params, @assets, @error, @created_at, @updated_at)`
-  ).run({
-    id: gen.id,
-    type: gen.type,
-    prompt: gen.prompt,
-    model: gen.model,
-    status: gen.status,
-    params: JSON.stringify(gen.params),
-    assets: JSON.stringify(gen.assets),
-    error: gen.error,
-    created_at: gen.createdAt,
-    updated_at: gen.updatedAt
-  })
+  db.insert(generations).values(gen).run()
   return gen
 }
 
 type GenerationPatch = Partial<Pick<Generation, 'status' | 'assets' | 'error' | 'params'>>
 
 export function updateGeneration(id: string, patch: GenerationPatch): Generation | undefined {
-  const existing = getGeneration(id)
-  if (!existing) return undefined
-  const next: Generation = {
-    ...existing,
-    ...patch,
-    updatedAt: Date.now()
-  }
-  db.prepare(
-    `UPDATE generations
-       SET status = @status, assets = @assets, error = @error,
-           params = @params, updated_at = @updated_at
-     WHERE id = @id`
-  ).run({
-    id,
-    status: next.status,
-    assets: JSON.stringify(next.assets),
-    error: next.error,
-    params: JSON.stringify(next.params),
-    updated_at: next.updatedAt
-  })
-  return next
+  return db
+    .update(generations)
+    .set({ ...patch, updatedAt: Date.now() })
+    .where(eq(generations.id, id))
+    .returning()
+    .get()
 }
 
 export function deleteGeneration(id: string): void {
-  db.prepare('DELETE FROM generations WHERE id = ?').run(id)
+  db.delete(generations).where(eq(generations.id, id)).run()
 }
