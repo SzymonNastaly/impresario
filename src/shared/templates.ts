@@ -3,8 +3,10 @@
 // later). The on-disk format is a self-describing, versioned envelope.
 import type { Template, TemplateCreate, TemplateConfig, TemplateKind } from './types'
 
+const CURRENT_SCHEMA_VERSION = 1 as const
+
 export interface TemplateFile {
-  schemaVersion: 1
+  schemaVersion: typeof CURRENT_SCHEMA_VERSION
   kind: TemplateKind
   name: string
   config: TemplateConfig
@@ -14,7 +16,7 @@ const KNOWN_KINDS: readonly TemplateKind[] = ['single-prompt']
 
 /** Strip id/timestamps; produce the on-disk representation. */
 export function serializeTemplate(t: Template): TemplateFile {
-  return { schemaVersion: 1, kind: t.kind, name: t.name, config: t.config }
+  return { schemaVersion: CURRENT_SCHEMA_VERSION, kind: t.kind, name: t.name, config: t.config }
 }
 
 /**
@@ -26,7 +28,7 @@ export function parseTemplateFile(raw: unknown): TemplateCreate {
     throw new Error('Invalid template file: expected a JSON object.')
   }
   const obj = raw as Record<string, unknown>
-  if (obj.schemaVersion !== 1) {
+  if (obj.schemaVersion !== CURRENT_SCHEMA_VERSION) {
     throw new Error('Unsupported template file version.')
   }
   const kind = obj.kind
@@ -55,13 +57,15 @@ function parseConfig(raw: unknown): TemplateConfig {
   const rawParams =
     typeof c.params === 'object' && c.params !== null ? (c.params as Record<string, unknown>) : {}
   return {
-    prompt: c.prompt,
-    model: c.model,
+    prompt: c.prompt.trim(),
+    model: c.model.trim(),
     params: {
       ...(typeof rawParams.numberOfImages === 'number'
         ? { numberOfImages: rawParams.numberOfImages }
         : {}),
-      ...(typeof rawParams.size === 'string' ? { size: rawParams.size } : {})
+      ...(typeof rawParams.size === 'string' && rawParams.size.trim()
+        ? { size: rawParams.size.trim() }
+        : {})
     }
   }
 }

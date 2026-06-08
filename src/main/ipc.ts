@@ -16,7 +16,7 @@ import * as keychain from './keychain'
 import * as storage from './storage'
 import { generateImages } from './generate'
 
-function broadcastChanged(): void {
+function broadcastGenerationsChanged(): void {
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) win.webContents.send(IPC.generationsChanged)
   }
@@ -40,7 +40,7 @@ async function runGeneration(gen: Generation, req: GenerateImageRequest): Promis
     if (!apiKey) throw new Error('No fal API key set. Add your key in Settings.')
 
     db.updateGeneration(gen.id, { status: 'running' })
-    broadcastChanged()
+    broadcastGenerationsChanged()
 
     const images = await generateImages(apiKey, {
       prompt: req.prompt,
@@ -54,10 +54,10 @@ async function runGeneration(gen: Generation, req: GenerateImageRequest): Promis
     )
 
     db.updateGeneration(gen.id, { status: 'completed', assets })
-    broadcastChanged()
+    broadcastGenerationsChanged()
   } catch (err) {
     db.updateGeneration(gen.id, { status: 'error', error: errorMessage(err) })
-    broadcastChanged()
+    broadcastGenerationsChanged()
   }
 }
 
@@ -83,7 +83,7 @@ function startImageGeneration(req: GenerateImageRequest): { id: string } {
   }
 
   db.insertGeneration(gen)
-  broadcastChanged()
+  broadcastGenerationsChanged()
 
   // Fire-and-forget: the renderer tracks progress via the change broadcast.
   void runGeneration(gen, { ...req, prompt })
@@ -111,7 +111,7 @@ function createTemplate(input: TemplateCreate): Template {
 async function exportTemplate(id: string): Promise<{ canceled: boolean; path?: string }> {
   const tpl = db.getTemplate(id)
   if (!tpl) throw new Error('Template not found.')
-  const safeName = tpl.name.replace(/[^\w.-]+/g, '_') || 'template'
+  const safeName = tpl.name.replace(/[^\w.-]+/g, '_').replace(/^[._]+|[._]+$/g, '') || 'template'
   const { canceled, filePath } = await dialog.showSaveDialog({
     title: 'Export template',
     defaultPath: `${safeName}.json`,
@@ -155,7 +155,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.generationsDelete, (_e, id: string) => {
     db.deleteGeneration(id)
     storage.deleteGenerationMedia(id)
-    broadcastChanged()
+    broadcastGenerationsChanged()
   })
   ipcMain.handle(IPC.generateImage, (_e, req: GenerateImageRequest) => startImageGeneration(req))
 
@@ -163,6 +163,10 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.templatesGetAll, () => db.getAllTemplates())
   ipcMain.handle(IPC.templatesCreate, (_e, input: TemplateCreate) => createTemplate(input))
   ipcMain.handle(IPC.templatesUpdate, (_e, id: string, patch: TemplateUpdate) => {
+    if (patch.name !== undefined) {
+      patch = { ...patch, name: patch.name.trim() }
+      if (!patch.name) throw new Error('Template name is required.')
+    }
     const tpl = db.updateTemplate(id, patch)
     if (!tpl) throw new Error('Template not found.')
     broadcastTemplatesChanged()

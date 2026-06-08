@@ -31,7 +31,7 @@ const api: ImpresarioApi = {
       ipcRenderer.on(IPC.templatesChanged, listener)
       return () => ipcRenderer.removeListener(IPC.templatesChanged, listener)
     }
-  },
+  }
 }
 
 // Expose APIs to the renderer only through the contextBridge.
