@@ -1,7 +1,7 @@
 // Types shared across the main, preload, and renderer processes.
 // Keep this file dependency-free so every process can import it cheaply.
 
-export type GenerationType = 'image' // future: 'video' | 'speech'
+export type GenerationType = 'image' | 'video' // future: 'speech'
 
 export type GenerationStatus = 'pending' | 'running' | 'completed' | 'error'
 
@@ -34,6 +34,16 @@ export interface GenerateImageRequest {
   numberOfImages?: number
   /** Size hint passed to the adapter, e.g. "1024x1024". */
   size?: string
+}
+
+export interface GenerateVideoRequest {
+  prompt: string
+  /** fal video model id, e.g. "fal-ai/veo3/fast". */
+  model?: string
+  /** Aspect ratio or size hint, provider-dependent (e.g. "16:9"). */
+  size?: string
+  /** Duration in seconds, if the model supports it. */
+  duration?: number
 }
 
 // ---- Templates ----------------------------------------------------------
@@ -93,6 +103,21 @@ export const DEFAULT_IMAGE_MODELS = [
 
 export const DEFAULT_IMAGE_MODEL = DEFAULT_IMAGE_MODELS[0].id
 
+/** A curated default set of fal video models to start with. */
+export const DEFAULT_VIDEO_MODELS = [
+  { id: 'fal-ai/veo3/fast', label: 'Veo 3 Fast' },
+  { id: 'fal-ai/kling-video/v2/master/text-to-video', label: 'Kling 2 Master' },
+  { id: 'fal-ai/minimax/hailuo-02/standard/text-to-video', label: 'Hailuo 02' },
+  { id: 'fal-ai/luma-dream-machine', label: 'Luma Dream Machine' }
+] as const
+
+export const DEFAULT_VIDEO_MODEL = DEFAULT_VIDEO_MODELS[0].id
+
+/** Which generation kind a model id belongs to (defaults to image). */
+export function modelKind(id: string): GenerationType {
+  return DEFAULT_VIDEO_MODELS.some((m) => m.id === id) ? 'video' : 'image'
+}
+
 /** IPC channel names — single source of truth for both sides of the bridge. */
 export const IPC = {
   // settings / BYOK
@@ -103,8 +128,17 @@ export const IPC = {
   generationsGetAll: 'generations:get-all',
   generationsDelete: 'generations:delete',
   generateImage: 'generate:image',
+  generateVideo: 'generate:video',
   // main -> renderer broadcast when the store changes
   generationsChanged: 'generations:changed',
+  // media file actions
+  mediaSave: 'media:save',
+  mediaSaveAs: 'media:save-as',
+  mediaReveal: 'media:reveal',
+  mediaShare: 'media:share',
+  // settings: save directory
+  settingsGetSaveDir: 'settings:get-save-dir',
+  settingsSetSaveDir: 'settings:set-save-dir',
   // templates
   templatesGetAll: 'templates:get-all',
   templatesCreate: 'templates:create',
