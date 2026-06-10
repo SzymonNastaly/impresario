@@ -18,7 +18,20 @@ const api: ImpresarioApi = {
       return () => ipcRenderer.removeListener(IPC.generationsChanged, listener)
     }
   },
-  generateImage: (req) => ipcRenderer.invoke(IPC.generateImage, req)
+  generateImage: (req) => ipcRenderer.invoke(IPC.generateImage, req),
+  templates: {
+    getAll: () => ipcRenderer.invoke(IPC.templatesGetAll),
+    create: (input) => ipcRenderer.invoke(IPC.templatesCreate, input),
+    update: (id, patch) => ipcRenderer.invoke(IPC.templatesUpdate, id, patch),
+    delete: (id) => ipcRenderer.invoke(IPC.templatesDelete, id),
+    export: (id) => ipcRenderer.invoke(IPC.templatesExport, id),
+    import: () => ipcRenderer.invoke(IPC.templatesImport),
+    onChanged: (callback) => {
+      const listener = (): void => callback()
+      ipcRenderer.on(IPC.templatesChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.templatesChanged, listener)
+    }
+  }
 }
 
 // Expose APIs to the renderer only through the contextBridge.

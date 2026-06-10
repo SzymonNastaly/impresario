@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react'
 import { useLiveQuery } from '@tanstack/react-db'
 import type { GenerateImageRequest } from '@shared/types'
 import { generationsCollection } from './lib/generations'
+import { templatesCollection } from './lib/templates'
 import { Sidebar } from './components/Sidebar'
 import { ResultView } from './components/ResultView'
 import { PromptBar } from './components/PromptBar'
 import { SettingsModal } from './components/SettingsModal'
+import { TemplateEditorModal } from './components/TemplateEditorModal'
 import { Button } from './components/ui/button'
 import { useKeyStatus } from './hooks/useKeyStatus'
 
@@ -15,6 +17,13 @@ function App(): React.JSX.Element {
     () => [...(data ?? [])].sort((a, b) => b.createdAt - a.createdAt),
     [data]
   )
+
+  const { data: templateData } = useLiveQuery((q) => q.from({ tpl: templatesCollection }))
+  const templates = useMemo(
+    () => [...(templateData ?? [])].sort((a, b) => b.createdAt - a.createdAt),
+    [templateData]
+  )
+  const [templatesOpen, setTemplatesOpen] = useState(false)
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -62,8 +71,10 @@ function App(): React.JSX.Element {
 
         <PromptBar
           hasKey={hasKey}
+          templates={templates}
           onGenerate={handleGenerate}
           onNeedKey={() => setSettingsOpen(true)}
+          onManageTemplates={() => setTemplatesOpen(true)}
         />
       </main>
 
@@ -72,6 +83,11 @@ function App(): React.JSX.Element {
         onOpenChange={setSettingsOpen}
         status={status}
         onChanged={refresh}
+      />
+      <TemplateEditorModal
+        open={templatesOpen}
+        onOpenChange={setTemplatesOpen}
+        templates={templates}
       />
     </div>
   )

@@ -1,20 +1,61 @@
 import { useState } from 'react'
-import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_MODELS, type GenerateImageRequest } from '@shared/types'
+import {
+  DEFAULT_IMAGE_MODEL,
+  DEFAULT_IMAGE_MODELS,
+  type GenerateImageRequest,
+  type Template
+} from '@shared/types'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue
+} from './ui/select'
 
 interface PromptBarProps {
   hasKey: boolean
+  templates: Template[]
   onGenerate: (req: GenerateImageRequest) => Promise<void>
   onNeedKey: () => void
+  onManageTemplates: () => void
 }
 
-export function PromptBar({ hasKey, onGenerate, onNeedKey }: PromptBarProps): React.JSX.Element {
+// Sentinel value for the "Manage templates…" action in the picker. Real
+// template ids are UUIDs, so this can never collide.
+const MANAGE_VALUE = '__manage__'
+
+export function PromptBar({
+  hasKey,
+  templates,
+  onGenerate,
+  onNeedKey,
+  onManageTemplates
+}: PromptBarProps): React.JSX.Element {
   const [prompt, setPrompt] = useState('')
   const [model, setModel] = useState<string>(DEFAULT_IMAGE_MODEL)
+  // Extra generation params carried from an applied template (no PromptBar
+  // controls for these yet; they ride into the generate request).
+  const [params, setParams] = useState<{ numberOfImages?: number; size?: string }>({})
 
   const canSubmit = prompt.trim().length > 0
+
+  // The picker is a one-shot action menu: its value is always '' so it shows
+  // the "Templates" placeholder and never visually "sticks" on a selection.
+  function onPickTemplate(value: string): void {
+    if (value === MANAGE_VALUE) {
+      onManageTemplates()
+      return
+    }
+    const tpl = templates.find((t) => t.id === value)
+    if (!tpl) return
+    setPrompt(tpl.config.prompt)
+    setModel(tpl.config.model)
+    setParams(tpl.config.params)
+  }
 
   async function submit(): Promise<void> {
     if (!hasKey) {
@@ -24,7 +65,8 @@ export function PromptBar({ hasKey, onGenerate, onNeedKey }: PromptBarProps): Re
     if (!canSubmit) return
     const text = prompt.trim()
     setPrompt('')
-    await onGenerate({ prompt: text, model })
+    setParams({})
+    await onGenerate({ prompt: text, model, ...params })
   }
 
   return (
@@ -44,18 +86,34 @@ export function PromptBar({ hasKey, onGenerate, onNeedKey }: PromptBarProps): Re
           }}
         />
         <div className="flex items-center justify-between gap-2.5">
-          <Select value={model} onValueChange={setModel}>
-            <SelectTrigger size="sm" className="w-auto">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DEFAULT_IMAGE_MODELS.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={model} onValueChange={setModel}>
+              <SelectTrigger size="sm" className="w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DEFAULT_IMAGE_MODELS.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value="" onValueChange={onPickTemplate}>
+              <SelectTrigger size="sm" className="w-auto">
+                <SelectValue placeholder="Templates" />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+                {templates.length > 0 && <SelectSeparator />}
+                <SelectItem value={MANAGE_VALUE}>Manage templates…</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button size="sm" disabled={!canSubmit} onClick={() => void submit()}>
             Generate
           </Button>
