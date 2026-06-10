@@ -91,8 +91,10 @@ function statusLabel(gen: Generation): string {
       return 'Queued'
     case 'running':
       return 'Generating'
-    case 'completed':
-      return `${gen.assets.length} image${gen.assets.length === 1 ? '' : 's'}`
+    case 'completed': {
+      const noun = gen.type === 'video' ? 'video' : 'image'
+      return `${gen.assets.length} ${noun}${gen.assets.length === 1 ? '' : 's'}`
+    }
     case 'error':
       return 'Failed'
   }
