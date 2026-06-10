@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
+import { mkdirSync, writeFileSync, rmSync, existsSync, copyFileSync } from 'fs'
 import { join, normalize, sep } from 'path'
 import { pathToFileURL } from 'url'
 import { app, net, protocol } from 'electron'
@@ -23,15 +23,18 @@ const EXT_BY_CONTENT_TYPE: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/jpg': 'jpg',
   'image/webp': 'webp',
-  'image/gif': 'gif'
+  'image/gif': 'gif',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov'
 }
 
 function extFor(contentType: string): string {
   return EXT_BY_CONTENT_TYPE[contentType.toLowerCase()] ?? 'bin'
 }
 
-/** Persist one image to disk and return its metadata (incl. media:// url). */
-export function saveImageAsset(
+/** Persist one media file to disk and return its metadata (incl. media:// url). */
+export function saveAsset(
   generationId: string,
   index: number,
   bytes: Buffer,
@@ -50,6 +53,24 @@ export function saveImageAsset(
 export function deleteGenerationMedia(generationId: string): void {
   const dir = generationDir(generationId)
   if (existsSync(dir)) rmSync(dir, { recursive: true, force: true })
+}
+
+/**
+ * Resolve an asset's absolute path on disk, constrained to the media root
+ * (returns null if it would escape the root or does not exist).
+ */
+export function assetAbsolutePath(generationId: string, fileName: string): string | null {
+  const root = mediaRoot()
+  const target = normalize(join(generationDir(generationId), fileName))
+  if (!target.startsWith(root + sep)) return null
+  return existsSync(target) ? target : null
+}
+
+/** Copy a stored asset to an arbitrary destination path. */
+export function copyAssetTo(generationId: string, fileName: string, destPath: string): void {
+  const src = assetAbsolutePath(generationId, fileName)
+  if (!src) throw new Error('Media file not found.')
+  copyFileSync(src, destPath)
 }
 
 /**
