@@ -18,7 +18,7 @@ import * as keychain from './keychain'
 import * as storage from './storage'
 import * as settings from './settings'
 import * as media from './media'
-import { generateImages, generateVideoAsset, resumeVideoAsset } from './generate'
+import { generateImages, generateVideoAsset, resumeVideoAsset, type RawVideo } from './generate'
 
 function broadcastGenerationsChanged(): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -93,32 +93,18 @@ function startImageGeneration(req: GenerateImageRequest): { id: string } {
   return { id: gen.id }
 }
 
-/** Background worker for the asynchronous video job lifecycle. */
-async function runVideoGeneration(gen: Generation, req: GenerateVideoRequest): Promise<void> {
+/**
+ * Shared tail of a video job: mark running, await the produced bytes, persist
+ * the asset and mark completed — or mark errored on any failure. `run` is the
+ * provider call that yields the finished video (it may be a fresh job or a
+ * resumed one).
+ */
+async function finalizeVideoJob(gen: Generation, run: () => Promise<RawVideo>): Promise<void> {
   try {
-    const apiKey = keychain.getApiKey()
-    if (!apiKey) throw new Error('No fal API key set. Add your key in Settings.')
-
     db.updateGeneration(gen.id, { status: 'running' })
     broadcastGenerationsChanged()
 
-    const video = await generateVideoAsset(
-      apiKey,
-      { prompt: req.prompt, model: gen.model, size: req.size, duration: req.duration },
-      {
-        onJob: (jobId) => {
-          db.updateGeneration(gen.id, { params: { ...gen.params, jobId } })
-          gen.params = { ...gen.params, jobId }
-          broadcastGenerationsChanged()
-        },
-        onProgress: (progress) => {
-          db.updateGeneration(gen.id, { params: { ...gen.params, progress } })
-          gen.params = { ...gen.params, progress }
-          broadcastGenerationsChanged()
-        }
-      }
-    )
-
+    const video = await run()
     const asset = storage.saveAsset(gen.id, 0, video.bytes, video.contentType)
     db.updateGeneration(gen.id, { status: 'completed', assets: [asset] })
     broadcastGenerationsChanged()
@@ -126,6 +112,36 @@ async function runVideoGeneration(gen: Generation, req: GenerateVideoRequest): P
     db.updateGeneration(gen.id, { status: 'error', error: errorMessage(err) })
     broadcastGenerationsChanged()
   }
+}
+
+/** Persist a video-job param update (jobId/progress) and broadcast it. */
+function updateVideoParams(gen: Generation, patch: Record<string, unknown>): void {
+  gen.params = { ...gen.params, ...patch }
+  db.updateGeneration(gen.id, { params: gen.params })
+  broadcastGenerationsChanged()
+}
+
+/** Background worker for a freshly created video job. */
+function runVideoGeneration(gen: Generation, req: GenerateVideoRequest): void {
+  void finalizeVideoJob(gen, async () => {
+    const apiKey = keychain.getApiKey()
+    if (!apiKey) throw new Error('No fal API key set. Add your key in Settings.')
+    return generateVideoAsset(
+      apiKey,
+      { prompt: req.prompt, model: gen.model, size: req.size, duration: req.duration },
+      {
+        onJob: (jobId) => updateVideoParams(gen, { jobId }),
+        onProgress: (progress) => updateVideoParams(gen, { progress })
+      }
+    )
+  })
+}
+
+/** Background worker that re-attaches to an already-created job after restart. */
+function resumeOne(gen: Generation, apiKey: string, jobId: string): void {
+  void finalizeVideoJob(gen, () =>
+    resumeVideoAsset(apiKey, gen.model, jobId, (progress) => updateVideoParams(gen, { progress }))
+  )
 }
 
 function startVideoGeneration(req: GenerateVideoRequest): { id: string } {
@@ -151,7 +167,7 @@ function startVideoGeneration(req: GenerateVideoRequest): { id: string } {
 
   db.insertGeneration(gen)
   broadcastGenerationsChanged()
-  void runVideoGeneration(gen, { ...req, prompt })
+  runVideoGeneration(gen, { ...req, prompt })
   return { id: gen.id }
 }
 
@@ -173,25 +189,7 @@ export function resumeRunningVideos(): void {
       broadcastGenerationsChanged()
       continue
     }
-    void resumeOne(gen, apiKey, jobId)
-  }
-}
-
-async function resumeOne(gen: Generation, apiKey: string, jobId: string): Promise<void> {
-  try {
-    db.updateGeneration(gen.id, { status: 'running' })
-    broadcastGenerationsChanged()
-    const video = await resumeVideoAsset(apiKey, gen.model, jobId, (progress) => {
-      db.updateGeneration(gen.id, { params: { ...gen.params, progress } })
-      gen.params = { ...gen.params, progress }
-      broadcastGenerationsChanged()
-    })
-    const asset = storage.saveAsset(gen.id, 0, video.bytes, video.contentType)
-    db.updateGeneration(gen.id, { status: 'completed', assets: [asset] })
-    broadcastGenerationsChanged()
-  } catch (err) {
-    db.updateGeneration(gen.id, { status: 'error', error: errorMessage(err) })
-    broadcastGenerationsChanged()
+    resumeOne(gen, apiKey, jobId)
   }
 }
 

@@ -50,9 +50,10 @@ export function share(generationId: string, fileName: string): void {
   if (process.platform !== 'darwin') return
   const path = storage.assetAbsolutePath(generationId, fileName)
   if (!path) throw new Error('Media file not found.')
-  const menu = Menu.buildFromTemplate([{ role: 'shareMenu', sharingItem: { filePaths: [path] } }])
   const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
-  menu.popup({ window: win ?? undefined })
+  if (!win) return
+  const menu = Menu.buildFromTemplate([{ role: 'shareMenu', sharingItem: { filePaths: [path] } }])
+  menu.popup({ window: win })
 }
 
 /** Append " (n)" before the extension until the path is free. */
