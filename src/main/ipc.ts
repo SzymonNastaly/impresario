@@ -4,8 +4,10 @@ import { ipcMain, BrowserWindow, dialog } from 'electron'
 import {
   IPC,
   DEFAULT_IMAGE_MODEL,
+  DEFAULT_VIDEO_MODEL,
   type Generation,
   type GenerateImageRequest,
+  type GenerateVideoRequest,
   type Template,
   type TemplateCreate,
   type TemplateUpdate
@@ -14,7 +16,9 @@ import { serializeTemplate, parseTemplateFile } from '@shared/templates'
 import * as db from './db'
 import * as keychain from './keychain'
 import * as storage from './storage'
-import { generateImages } from './generate'
+import * as settings from './settings'
+import * as media from './media'
+import { generateImages, generateVideoAsset, resumeVideoAsset } from './generate'
 
 function broadcastGenerationsChanged(): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -49,9 +53,7 @@ async function runGeneration(gen: Generation, req: GenerateImageRequest): Promis
       size: req.size
     })
 
-    const assets = images.map((img, i) =>
-      storage.saveImageAsset(gen.id, i, img.bytes, img.contentType)
-    )
+    const assets = images.map((img, i) => storage.saveAsset(gen.id, i, img.bytes, img.contentType))
 
     db.updateGeneration(gen.id, { status: 'completed', assets })
     broadcastGenerationsChanged()
@@ -89,6 +91,108 @@ function startImageGeneration(req: GenerateImageRequest): { id: string } {
   void runGeneration(gen, { ...req, prompt })
 
   return { id: gen.id }
+}
+
+/** Background worker for the asynchronous video job lifecycle. */
+async function runVideoGeneration(gen: Generation, req: GenerateVideoRequest): Promise<void> {
+  try {
+    const apiKey = keychain.getApiKey()
+    if (!apiKey) throw new Error('No fal API key set. Add your key in Settings.')
+
+    db.updateGeneration(gen.id, { status: 'running' })
+    broadcastGenerationsChanged()
+
+    const video = await generateVideoAsset(
+      apiKey,
+      { prompt: req.prompt, model: gen.model, size: req.size, duration: req.duration },
+      {
+        onJob: (jobId) => {
+          db.updateGeneration(gen.id, { params: { ...gen.params, jobId } })
+          gen.params = { ...gen.params, jobId }
+          broadcastGenerationsChanged()
+        },
+        onProgress: (progress) => {
+          db.updateGeneration(gen.id, { params: { ...gen.params, progress } })
+          gen.params = { ...gen.params, progress }
+          broadcastGenerationsChanged()
+        }
+      }
+    )
+
+    const asset = storage.saveAsset(gen.id, 0, video.bytes, video.contentType)
+    db.updateGeneration(gen.id, { status: 'completed', assets: [asset] })
+    broadcastGenerationsChanged()
+  } catch (err) {
+    db.updateGeneration(gen.id, { status: 'error', error: errorMessage(err) })
+    broadcastGenerationsChanged()
+  }
+}
+
+function startVideoGeneration(req: GenerateVideoRequest): { id: string } {
+  const prompt = req.prompt?.trim()
+  if (!prompt) throw new Error('Prompt is required.')
+
+  const now = Date.now()
+  const gen: Generation = {
+    id: randomUUID(),
+    type: 'video',
+    prompt,
+    model: req.model || DEFAULT_VIDEO_MODEL,
+    status: 'pending',
+    params: {
+      ...(req.size ? { size: req.size } : {}),
+      ...(req.duration ? { duration: req.duration } : {})
+    },
+    assets: [],
+    error: null,
+    createdAt: now,
+    updatedAt: now
+  }
+
+  db.insertGeneration(gen)
+  broadcastGenerationsChanged()
+  void runVideoGeneration(gen, { ...req, prompt })
+  return { id: gen.id }
+}
+
+/**
+ * Re-attach polling to video jobs left mid-flight by an app restart. A job
+ * with a stored jobId resumes; one without is marked errored (unrecoverable).
+ */
+export function resumeRunningVideos(): void {
+  const apiKey = keychain.getApiKey()
+  for (const gen of db.getAllGenerations()) {
+    if (gen.type !== 'video') continue
+    if (gen.status !== 'pending' && gen.status !== 'running') continue
+    const jobId = typeof gen.params.jobId === 'string' ? gen.params.jobId : null
+    if (!apiKey || !jobId) {
+      db.updateGeneration(gen.id, {
+        status: 'error',
+        error: 'Interrupted before completion. Please generate again.'
+      })
+      broadcastGenerationsChanged()
+      continue
+    }
+    void resumeOne(gen, apiKey, jobId)
+  }
+}
+
+async function resumeOne(gen: Generation, apiKey: string, jobId: string): Promise<void> {
+  try {
+    db.updateGeneration(gen.id, { status: 'running' })
+    broadcastGenerationsChanged()
+    const video = await resumeVideoAsset(apiKey, gen.model, jobId, (progress) => {
+      db.updateGeneration(gen.id, { params: { ...gen.params, progress } })
+      gen.params = { ...gen.params, progress }
+      broadcastGenerationsChanged()
+    })
+    const asset = storage.saveAsset(gen.id, 0, video.bytes, video.contentType)
+    db.updateGeneration(gen.id, { status: 'completed', assets: [asset] })
+    broadcastGenerationsChanged()
+  } catch (err) {
+    db.updateGeneration(gen.id, { status: 'error', error: errorMessage(err) })
+    broadcastGenerationsChanged()
+  }
 }
 
 function createTemplate(input: TemplateCreate): Template {
@@ -158,6 +262,25 @@ export function registerIpcHandlers(): void {
     broadcastGenerationsChanged()
   })
   ipcMain.handle(IPC.generateImage, (_e, req: GenerateImageRequest) => startImageGeneration(req))
+  ipcMain.handle(IPC.generateVideo, (_e, req: GenerateVideoRequest) => startVideoGeneration(req))
+
+  // media file actions
+  ipcMain.handle(IPC.mediaSave, (_e, id: string, file: string) => media.saveToDefault(id, file))
+  ipcMain.handle(IPC.mediaSaveAs, (_e, id: string, file: string) => media.saveAs(id, file))
+  ipcMain.handle(IPC.mediaReveal, (_e, id: string, file: string) => media.reveal(id, file))
+  ipcMain.handle(IPC.mediaShare, (_e, id: string, file: string) => media.share(id, file))
+
+  // settings: save directory
+  ipcMain.handle(IPC.settingsGetSaveDir, () => settings.getSaveDir())
+  ipcMain.handle(IPC.settingsSetSaveDir, async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Choose default save folder',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (canceled || filePaths.length === 0) return settings.getSaveDir()
+    settings.setSaveDir(filePaths[0])
+    return filePaths[0]
+  })
 
   // templates
   ipcMain.handle(IPC.templatesGetAll, () => db.getAllTemplates())

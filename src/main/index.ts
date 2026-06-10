@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initDb } from './db'
 import { registerMediaProtocol, MEDIA_SCHEME } from './storage'
-import { registerIpcHandlers } from './ipc'
+import { registerIpcHandlers, resumeRunningVideos } from './ipc'
 
 // Privileged schemes must be registered before the app is ready.
 protocol.registerSchemesAsPrivileged([
@@ -56,6 +56,7 @@ app.whenReady().then(() => {
   initDb()
   registerMediaProtocol()
   registerIpcHandlers()
+  resumeRunningVideos()
 
   createWindow()
 
