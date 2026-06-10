@@ -7,7 +7,9 @@ const api: ImpresarioApi = {
   settings: {
     getKeyStatus: () => ipcRenderer.invoke(IPC.settingsGetKeyStatus),
     setKey: (key) => ipcRenderer.invoke(IPC.settingsSetKey, key),
-    clearKey: () => ipcRenderer.invoke(IPC.settingsClearKey)
+    clearKey: () => ipcRenderer.invoke(IPC.settingsClearKey),
+    getSaveDir: () => ipcRenderer.invoke(IPC.settingsGetSaveDir),
+    setSaveDir: () => ipcRenderer.invoke(IPC.settingsSetSaveDir)
   },
   generations: {
     getAll: () => ipcRenderer.invoke(IPC.generationsGetAll),
@@ -19,6 +21,13 @@ const api: ImpresarioApi = {
     }
   },
   generateImage: (req) => ipcRenderer.invoke(IPC.generateImage, req),
+  generateVideo: (req) => ipcRenderer.invoke(IPC.generateVideo, req),
+  media: {
+    save: (id, file) => ipcRenderer.invoke(IPC.mediaSave, id, file),
+    saveAs: (id, file) => ipcRenderer.invoke(IPC.mediaSaveAs, id, file),
+    reveal: (id, file) => ipcRenderer.invoke(IPC.mediaReveal, id, file),
+    share: (id, file) => ipcRenderer.invoke(IPC.mediaShare, id, file)
+  },
   templates: {
     getAll: () => ipcRenderer.invoke(IPC.templatesGetAll),
     create: (input) => ipcRenderer.invoke(IPC.templatesCreate, input),

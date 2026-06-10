@@ -1,6 +1,7 @@
 import type {
   Generation,
   GenerateImageRequest,
+  GenerateVideoRequest,
   KeyStatus,
   Template,
   TemplateCreate,
@@ -16,6 +17,10 @@ export interface ImpresarioApi {
     getKeyStatus(): Promise<KeyStatus>
     setKey(key: string): Promise<KeyStatus>
     clearKey(): Promise<KeyStatus>
+    /** The remembered default save folder, or null if unset. */
+    getSaveDir(): Promise<string | null>
+    /** Prompt for a folder and remember it; returns the chosen (or current) dir. */
+    setSaveDir(): Promise<string | null>
   }
   generations: {
     getAll(): Promise<Generation[]>
@@ -24,6 +29,16 @@ export interface ImpresarioApi {
     onChanged(callback: () => void): () => void
   }
   generateImage(req: GenerateImageRequest): Promise<{ id: string }>
+  generateVideo(req: GenerateVideoRequest): Promise<{ id: string }>
+  media: {
+    /** Save to the remembered folder (prompts for one the first time). */
+    save(generationId: string, fileName: string): Promise<{ canceled: boolean; path?: string }>
+    /** Always opens a Save-As dialog. */
+    saveAs(generationId: string, fileName: string): Promise<{ canceled: boolean; path?: string }>
+    reveal(generationId: string, fileName: string): Promise<void>
+    /** macOS native share sheet; no-op on other platforms. */
+    share(generationId: string, fileName: string): Promise<void>
+  }
   templates: {
     getAll(): Promise<Template[]>
     create(input: TemplateCreate): Promise<Template>
