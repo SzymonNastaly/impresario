@@ -85,9 +85,10 @@ export interface KeyStatus {
 
 /** A curated default set of fal models to start with. */
 export const DEFAULT_IMAGE_MODELS = [
-  { id: 'fal-ai/flux/dev', label: 'FLUX.1 [dev]' },
-  { id: 'fal-ai/flux/schnell', label: 'FLUX.1 [schnell] (fast)' },
-  { id: 'fal-ai/flux-pro/v1.1', label: 'FLUX1.1 [pro]' }
+  { id: 'fal-ai/flux-2/flash', label: 'FLUX.2 Flash' },
+  { id: 'fal-ai/nano-banana-2', label: 'Nano Banana 2' },
+  { id: 'openai/gpt-image-2', label: 'GPT Image 2' },
+  { id: 'fal-ai/recraft/v4/text-to-image', label: 'Recraft V4' }
 ] as const
 
 export const DEFAULT_IMAGE_MODEL = DEFAULT_IMAGE_MODELS[0].id
