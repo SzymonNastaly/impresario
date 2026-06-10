@@ -56,9 +56,10 @@ app.whenReady().then(() => {
   initDb()
   registerMediaProtocol()
   registerIpcHandlers()
-  resumeRunningVideos()
 
   createWindow()
+
+  resumeRunningVideos()
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

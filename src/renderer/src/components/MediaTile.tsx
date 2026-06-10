@@ -22,10 +22,14 @@ export function MediaTile({
   const isVideo = asset.contentType.startsWith('video/')
 
   async function save(): Promise<void> {
-    const res = await window.api.media.save(generationId, asset.fileName)
-    if (!res.canceled) {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 1500)
+    try {
+      const res = await window.api.media.save(generationId, asset.fileName)
+      if (!res.canceled) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 1500)
+      }
+    } catch (err) {
+      console.error('Failed to save media:', err)
     }
   }
 
@@ -56,7 +60,11 @@ export function MediaTile({
             variant="secondary"
             size="icon-xs"
             title="Share"
-            onClick={() => void window.api.media.share(generationId, asset.fileName)}
+            onClick={() => {
+              window.api.media
+                .share(generationId, asset.fileName)
+                .catch((err) => console.error('Failed to share media:', err))
+            }}
           >
             <Share2 />
           </Button>
@@ -65,7 +73,11 @@ export function MediaTile({
           variant="secondary"
           size="icon-xs"
           title="Reveal in Finder"
-          onClick={() => void window.api.media.reveal(generationId, asset.fileName)}
+          onClick={() => {
+            window.api.media
+              .reveal(generationId, asset.fileName)
+              .catch((err) => console.error('Failed to reveal media:', err))
+          }}
         >
           <FolderOpen />
         </Button>

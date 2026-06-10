@@ -89,6 +89,6 @@ export function registerMediaProtocol(): void {
     if (!existsSync(target)) {
       return new Response('Not found', { status: 404 })
     }
-    return net.fetch(pathToFileURL(target).toString())
+    return net.fetch(pathToFileURL(target).toString(), { headers: request.headers })
   })
 }
