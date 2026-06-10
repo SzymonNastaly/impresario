@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from '@tanstack/react-db'
-import type { GenerateImageRequest } from '@shared/types'
+import { modelKind, type GenerateImageRequest, type GenerateVideoRequest } from '@shared/types'
 import { generationsCollection } from './lib/generations'
 import { templatesCollection } from './lib/templates'
 import { Sidebar } from './components/Sidebar'
@@ -37,8 +37,10 @@ function App(): React.JSX.Element {
   const selected = generations.find((g) => g.id === activeId) ?? null
   const hasKey = status?.hasKey ?? false
 
-  async function handleGenerate(req: GenerateImageRequest): Promise<void> {
-    const { id } = await window.api.generateImage(req)
+  async function handleGenerate(req: GenerateImageRequest | GenerateVideoRequest): Promise<void> {
+    const kind = modelKind(req.model ?? '')
+    const { id } =
+      kind === 'video' ? await window.api.generateVideo(req) : await window.api.generateImage(req)
     setSelectedId(id)
   }
 

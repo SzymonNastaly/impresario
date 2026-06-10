@@ -2,7 +2,10 @@ import { useState } from 'react'
 import {
   DEFAULT_IMAGE_MODEL,
   DEFAULT_IMAGE_MODELS,
+  DEFAULT_VIDEO_MODELS,
+  modelKind,
   type GenerateImageRequest,
+  type GenerateVideoRequest,
   type Template
 } from '@shared/types'
 import { Button } from './ui/button'
@@ -10,7 +13,9 @@ import { Textarea } from './ui/textarea'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectSeparator,
   SelectTrigger,
   SelectValue
@@ -19,13 +24,11 @@ import {
 interface PromptBarProps {
   hasKey: boolean
   templates: Template[]
-  onGenerate: (req: GenerateImageRequest) => Promise<void>
+  onGenerate: (req: GenerateImageRequest | GenerateVideoRequest) => Promise<void>
   onNeedKey: () => void
   onManageTemplates: () => void
 }
 
-// Sentinel value for the "Manage templates…" action in the picker. Real
-// template ids are UUIDs, so this can never collide.
 const MANAGE_VALUE = '__manage__'
 
 export function PromptBar({
@@ -37,14 +40,11 @@ export function PromptBar({
 }: PromptBarProps): React.JSX.Element {
   const [prompt, setPrompt] = useState('')
   const [model, setModel] = useState<string>(DEFAULT_IMAGE_MODEL)
-  // Extra generation params carried from an applied template (no PromptBar
-  // controls for these yet; they ride into the generate request).
   const [params, setParams] = useState<{ numberOfImages?: number; size?: string }>({})
 
+  const kind = modelKind(model)
   const canSubmit = prompt.trim().length > 0
 
-  // The picker is a one-shot action menu: its value is always '' so it shows
-  // the "Templates" placeholder and never visually "sticks" on a selection.
   function onPickTemplate(value: string): void {
     if (value === MANAGE_VALUE) {
       onManageTemplates()
@@ -66,7 +66,11 @@ export function PromptBar({
     const text = prompt.trim()
     setPrompt('')
     setParams({})
-    await onGenerate({ prompt: text, model, ...params })
+    if (modelKind(model) === 'video') {
+      await onGenerate({ prompt: text, model })
+    } else {
+      await onGenerate({ prompt: text, model, ...params })
+    }
   }
 
   return (
@@ -74,7 +78,9 @@ export function PromptBar({
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-input/30 p-2.5 pl-3.5 transition-colors focus-within:border-ring">
         <Textarea
           rows={1}
-          placeholder="Describe an image to generate…"
+          placeholder={
+            kind === 'video' ? 'Describe a video to generate…' : 'Describe an image to generate…'
+          }
           className="max-h-44 min-h-0 border-0 bg-transparent p-0 shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -92,11 +98,23 @@ export function PromptBar({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {DEFAULT_IMAGE_MODELS.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.label}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Image</SelectLabel>
+                  {DEFAULT_IMAGE_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectLabel>Video</SelectLabel>
+                  {DEFAULT_VIDEO_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Select value="" onValueChange={onPickTemplate}>
