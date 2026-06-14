@@ -1,8 +1,10 @@
 import { resolve } from 'path'
 import { defineConfig } from 'vitest/config'
 
-// Vitest runs the data layer in plain Node (no Electron). Aliases mirror
-// electron.vite.config.ts so test imports resolve like production code.
+// Vitest runs under Electron's Node (see the `test` script: ELECTRON_RUN_AS_NODE),
+// so the data-layer tests load the same Electron-built better-sqlite3 binary the
+// app uses — avoiding the native-module ABI clash between Node and Electron.
+// Aliases mirror electron.vite.config.ts so test imports resolve like production.
 export default defineConfig({
   resolve: {
     alias: {
