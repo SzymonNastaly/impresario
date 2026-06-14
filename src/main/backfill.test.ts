@@ -36,9 +36,7 @@ test('wraps each legacy generation in its own conversation', () => {
     { id: 'g1', title: 'a sunset over mountains' },
     { id: 'g2', title: 'a cat astronaut' }
   ])
-  const gens = sqlite
-    .prepare('SELECT id, conversation_id FROM generations ORDER BY id')
-    .all()
+  const gens = sqlite.prepare('SELECT id, conversation_id FROM generations ORDER BY id').all()
   expect(gens).toEqual([
     { id: 'g1', conversation_id: 'g1' },
     { id: 'g2', conversation_id: 'g2' }

@@ -44,10 +44,7 @@ export function closeDatabase(): void {
 export function initDb(): void {
   // Migration SQL lives in ./drizzle (next to package.json), which ships inside
   // the app bundle, so the same path resolves in dev and packaged builds.
-  openDatabase(
-    join(app.getPath('userData'), 'impresario.db'),
-    join(app.getAppPath(), 'drizzle')
-  )
+  openDatabase(join(app.getPath('userData'), 'impresario.db'), join(app.getAppPath(), 'drizzle'))
 }
 
 // The `generations.conversationId` column is nullable at the DB level only
@@ -60,9 +57,7 @@ export function getAllGenerations(): Generation[] {
 }
 
 export function getGeneration(id: string): Generation | undefined {
-  return db.select().from(generations).where(eq(generations.id, id)).get() as
-    | Generation
-    | undefined
+  return db.select().from(generations).where(eq(generations.id, id)).get() as Generation | undefined
 }
 
 export function insertGeneration(gen: Generation): Generation {

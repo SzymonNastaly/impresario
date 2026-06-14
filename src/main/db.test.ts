@@ -44,7 +44,12 @@ test('getGenerationsByConversation filters by parent', () => {
   db.insertConversation({ id: 'c1', title: 'c', createdAt: 1, updatedAt: 1 })
   db.insertGeneration(makeGeneration('g1', 'c1'))
   db.insertGeneration(makeGeneration('g2', 'c1'))
-  expect(db.getGenerationsByConversation('c1').map((g) => g.id).sort()).toEqual(['g1', 'g2'])
+  expect(
+    db
+      .getGenerationsByConversation('c1')
+      .map((g) => g.id)
+      .sort()
+  ).toEqual(['g1', 'g2'])
 })
 
 test('deleteConversation cascades to its generations and returns their ids', () => {

@@ -38,10 +38,7 @@ export const generations = sqliteTable(
     status: text('status').$type<GenerationStatus>().notNull(),
     params: text('params', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
     assets: text('assets', { mode: 'json' }).$type<GenerationAsset[]>().notNull().default([]),
-    attachments: text('attachments', { mode: 'json' })
-      .$type<Attachment[]>()
-      .notNull()
-      .default([]),
+    attachments: text('attachments', { mode: 'json' }).$type<Attachment[]>().notNull().default([]),
     error: text('error'),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull()
