@@ -50,6 +50,11 @@ export function initDb(): void {
   )
 }
 
+// The `generations.conversationId` column is nullable at the DB level only
+// because SQLite cannot add a NOT NULL column to a populated table without a
+// full table rebuild. The startup backfill links every legacy row and the app
+// always sets it on insert, so in practice it is never null — hence the casts
+// from Drizzle's inferred `string | null` to the `Generation` type's `string`.
 export function getAllGenerations(): Generation[] {
   return db.select().from(generations).orderBy(desc(generations.createdAt)).all() as Generation[]
 }
