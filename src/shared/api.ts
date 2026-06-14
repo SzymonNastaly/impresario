@@ -1,4 +1,6 @@
 import type {
+  Conversation,
+  ConversationCreate,
   Generation,
   GenerateImageRequest,
   GenerateVideoRequest,
@@ -28,8 +30,16 @@ export interface ImpresarioApi {
     /** Subscribe to store changes. Returns an unsubscribe function. */
     onChanged(callback: () => void): () => void
   }
-  generateImage(req: GenerateImageRequest): Promise<{ id: string }>
-  generateVideo(req: GenerateVideoRequest): Promise<{ id: string }>
+  generateImage(req: GenerateImageRequest): Promise<{ id: string; conversationId: string }>
+  generateVideo(req: GenerateVideoRequest): Promise<{ id: string; conversationId: string }>
+  conversations: {
+    getAll(): Promise<Conversation[]>
+    create(input?: ConversationCreate): Promise<Conversation>
+    rename(id: string, title: string): Promise<Conversation>
+    delete(id: string): Promise<void>
+    /** Subscribe to store changes. Returns an unsubscribe function. */
+    onChanged(callback: () => void): () => void
+  }
   media: {
     /** Save to the remembered folder (prompts for one the first time). */
     save(generationId: string, fileName: string): Promise<{ canceled: boolean; path?: string }>

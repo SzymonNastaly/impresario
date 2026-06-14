@@ -20,6 +20,17 @@ const api: ImpresarioApi = {
       return () => ipcRenderer.removeListener(IPC.generationsChanged, listener)
     }
   },
+  conversations: {
+    getAll: () => ipcRenderer.invoke(IPC.conversationsGetAll),
+    create: (input) => ipcRenderer.invoke(IPC.conversationsCreate, input ?? {}),
+    rename: (id, title) => ipcRenderer.invoke(IPC.conversationsRename, id, title),
+    delete: (id) => ipcRenderer.invoke(IPC.conversationsDelete, id),
+    onChanged: (callback) => {
+      const listener = (): void => callback()
+      ipcRenderer.on(IPC.conversationsChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.conversationsChanged, listener)
+    }
+  },
   generateImage: (req) => ipcRenderer.invoke(IPC.generateImage, req),
   generateVideo: (req) => ipcRenderer.invoke(IPC.generateVideo, req),
   media: {
