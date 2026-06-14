@@ -13,8 +13,19 @@ export interface GenerationAsset {
   contentType: string
 }
 
+/** A reference-file input attached to a generation (Spec B captures these). */
+export interface Attachment {
+  /** Filename within the generation's input/ folder (e.g. "0.png"). */
+  fileName: string
+  /** Custom-protocol URL the renderer can render directly. */
+  url: string
+  contentType: string
+}
+
 export interface Generation {
   id: string
+  /** Parent conversation (turn ordering is by createdAt). */
+  conversationId: string
   type: GenerationType
   prompt: string
   model: string
@@ -22,6 +33,8 @@ export interface Generation {
   /** Provider/request parameters (size, numberOfImages, seed, ...). */
   params: Record<string, unknown>
   assets: GenerationAsset[]
+  /** Reference-file inputs (not sent to fal yet). */
+  attachments: Attachment[]
   error: string | null
   createdAt: number
   updatedAt: number
@@ -29,6 +42,8 @@ export interface Generation {
 
 export interface GenerateImageRequest {
   prompt: string
+  /** Append the turn to this conversation; a new one is created if omitted. */
+  conversationId?: string
   /** fal model id, e.g. "fal-ai/flux/dev". */
   model?: string
   numberOfImages?: number
@@ -38,6 +53,8 @@ export interface GenerateImageRequest {
 
 export interface GenerateVideoRequest {
   prompt: string
+  /** Append the turn to this conversation; a new one is created if omitted. */
+  conversationId?: string
   /** fal video model id, e.g. "fal-ai/veo3/fast". */
   model?: string
   /** Aspect ratio or size hint, provider-dependent (e.g. "16:9"). */
@@ -84,6 +101,26 @@ export interface TemplateCreate {
 export interface TemplateUpdate {
   name?: string
   config?: TemplateConfig
+}
+
+// ---- Conversations ------------------------------------------------------
+// A conversation groups one or more generations (turns), newest by createdAt.
+export interface Conversation {
+  id: string
+  title: string
+  createdAt: number
+  updatedAt: number
+}
+
+/** Inputs for creating a conversation; main assigns id/timestamps. */
+export interface ConversationCreate {
+  /** Defaults to "New chat" when omitted. */
+  title?: string
+}
+
+/** Partial update; main bumps updatedAt. */
+export interface ConversationUpdate {
+  title?: string
 }
 
 export interface KeyStatus {
@@ -223,6 +260,12 @@ export const IPC = {
   generateVideo: 'generate:video',
   // main -> renderer broadcast when the store changes
   generationsChanged: 'generations:changed',
+  // conversations
+  conversationsGetAll: 'conversations:get-all',
+  conversationsCreate: 'conversations:create',
+  conversationsRename: 'conversations:rename',
+  conversationsDelete: 'conversations:delete',
+  conversationsChanged: 'conversations:changed',
   // media file actions
   mediaSave: 'media:save',
   mediaSaveAs: 'media:save-as',
