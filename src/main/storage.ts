@@ -10,7 +10,7 @@ import {
 import { join, normalize, sep, extname } from 'path'
 import { Readable } from 'stream'
 import { app, protocol } from 'electron'
-import type { GenerationAsset } from '@shared/types'
+import type { GenerationAsset, Attachment } from '@shared/types'
 
 // Large media bytes live on disk under userData/media/<generationId>/,
 // while only metadata + file references are stored in SQLite. The renderer
@@ -69,6 +69,24 @@ export function saveAsset(
   return {
     fileName,
     url: `${MEDIA_SCHEME}://asset/${generationId}/${fileName}`,
+    contentType
+  }
+}
+
+/** Persist one reference-file input under the generation's input/ folder. */
+export function saveInputAsset(
+  generationId: string,
+  index: number,
+  bytes: Buffer,
+  contentType: string
+): Attachment {
+  const dir = join(generationDir(generationId), 'input')
+  mkdirSync(dir, { recursive: true })
+  const fileName = `${index}.${extFor(contentType)}`
+  writeFileSync(join(dir, fileName), bytes)
+  return {
+    fileName,
+    url: `${MEDIA_SCHEME}://asset/${generationId}/input/${fileName}`,
     contentType
   }
 }
