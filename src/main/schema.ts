@@ -6,6 +6,7 @@ import type {
   GenerationType,
   GenerationStatus,
   GenerationAsset,
+  Attachment,
   TemplateKind,
   TemplateConfig
 } from '../shared/types'
@@ -15,16 +16,32 @@ import type {
 //
 // `params` and `assets` use json mode, so Drizzle handles the
 // stringify/parse marshalling that used to be done by hand.
+export const conversations = sqliteTable(
+  'conversations',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull()
+  },
+  (table) => [index('idx_conversations_created_at').on(desc(table.createdAt))]
+)
+
 export const generations = sqliteTable(
   'generations',
   {
     id: text('id').primaryKey(),
+    conversationId: text('conversation_id').references(() => conversations.id),
     type: text('type').$type<GenerationType>().notNull(),
     prompt: text('prompt').notNull(),
     model: text('model').notNull(),
     status: text('status').$type<GenerationStatus>().notNull(),
     params: text('params', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
     assets: text('assets', { mode: 'json' }).$type<GenerationAsset[]>().notNull().default([]),
+    attachments: text('attachments', { mode: 'json' })
+      .$type<Attachment[]>()
+      .notNull()
+      .default([]),
     error: text('error'),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull()
