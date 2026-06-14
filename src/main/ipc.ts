@@ -5,6 +5,8 @@ import {
   IPC,
   DEFAULT_IMAGE_MODEL,
   DEFAULT_VIDEO_MODEL,
+  type Conversation,
+  type ConversationCreate,
   type Generation,
   type GenerateImageRequest,
   type GenerateVideoRequest,
@@ -24,6 +26,32 @@ function broadcastGenerationsChanged(): void {
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) win.webContents.send(IPC.generationsChanged)
   }
+}
+
+function broadcastConversationsChanged(): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send(IPC.conversationsChanged)
+  }
+}
+
+/** Create a conversation row, broadcast, and return it. */
+function createConversation(input: ConversationCreate = {}): Conversation {
+  const now = Date.now()
+  const conv: Conversation = {
+    id: randomUUID(),
+    title: input.title?.trim() || 'New chat',
+    createdAt: now,
+    updatedAt: now
+  }
+  db.insertConversation(conv)
+  broadcastConversationsChanged()
+  return conv
+}
+
+/** Resolve the conversation a new turn belongs to, creating one if needed. */
+function resolveConversationId(prompt: string, conversationId?: string): string {
+  if (conversationId && db.getConversation(conversationId)) return conversationId
+  return createConversation({ title: prompt.slice(0, 80) }).id
 }
 
 function broadcastTemplatesChanged(): void {
@@ -63,13 +91,15 @@ async function runGeneration(gen: Generation, req: GenerateImageRequest): Promis
   }
 }
 
-function startImageGeneration(req: GenerateImageRequest): { id: string } {
+function startImageGeneration(req: GenerateImageRequest): { id: string; conversationId: string } {
   const prompt = req.prompt?.trim()
   if (!prompt) throw new Error('Prompt is required.')
 
+  const conversationId = resolveConversationId(prompt, req.conversationId)
   const now = Date.now()
   const gen: Generation = {
     id: randomUUID(),
+    conversationId,
     type: 'image',
     prompt,
     model: req.model || DEFAULT_IMAGE_MODEL,
@@ -79,6 +109,7 @@ function startImageGeneration(req: GenerateImageRequest): { id: string } {
       ...(req.size ? { size: req.size } : {})
     },
     assets: [],
+    attachments: [],
     error: null,
     createdAt: now,
     updatedAt: now
@@ -90,7 +121,7 @@ function startImageGeneration(req: GenerateImageRequest): { id: string } {
   // Fire-and-forget: the renderer tracks progress via the change broadcast.
   void runGeneration(gen, { ...req, prompt })
 
-  return { id: gen.id }
+  return { id: gen.id, conversationId }
 }
 
 /**
@@ -144,13 +175,15 @@ function resumeOne(gen: Generation, apiKey: string, jobId: string): void {
   )
 }
 
-function startVideoGeneration(req: GenerateVideoRequest): { id: string } {
+function startVideoGeneration(req: GenerateVideoRequest): { id: string; conversationId: string } {
   const prompt = req.prompt?.trim()
   if (!prompt) throw new Error('Prompt is required.')
 
+  const conversationId = resolveConversationId(prompt, req.conversationId)
   const now = Date.now()
   const gen: Generation = {
     id: randomUUID(),
+    conversationId,
     type: 'video',
     prompt,
     model: req.model || DEFAULT_VIDEO_MODEL,
@@ -160,6 +193,7 @@ function startVideoGeneration(req: GenerateVideoRequest): { id: string } {
       ...(req.duration ? { duration: req.duration } : {})
     },
     assets: [],
+    attachments: [],
     error: null,
     createdAt: now,
     updatedAt: now
@@ -168,7 +202,7 @@ function startVideoGeneration(req: GenerateVideoRequest): { id: string } {
   db.insertGeneration(gen)
   broadcastGenerationsChanged()
   runVideoGeneration(gen, { ...req, prompt })
-  return { id: gen.id }
+  return { id: gen.id, conversationId }
 }
 
 /**
@@ -261,6 +295,26 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle(IPC.generateImage, (_e, req: GenerateImageRequest) => startImageGeneration(req))
   ipcMain.handle(IPC.generateVideo, (_e, req: GenerateVideoRequest) => startVideoGeneration(req))
+
+  // conversations
+  ipcMain.handle(IPC.conversationsGetAll, () => db.getAllConversations())
+  ipcMain.handle(IPC.conversationsCreate, (_e, input: ConversationCreate) =>
+    createConversation(input)
+  )
+  ipcMain.handle(IPC.conversationsRename, (_e, id: string, title: string) => {
+    const trimmed = title.trim()
+    if (!trimmed) throw new Error('Conversation title is required.')
+    const conv = db.updateConversation(id, { title: trimmed })
+    if (!conv) throw new Error('Conversation not found.')
+    broadcastConversationsChanged()
+    return conv
+  })
+  ipcMain.handle(IPC.conversationsDelete, (_e, id: string) => {
+    const generationIds = db.deleteConversation(id)
+    for (const gid of generationIds) storage.deleteGenerationMedia(gid)
+    broadcastConversationsChanged()
+    broadcastGenerationsChanged()
+  })
 
   // media file actions
   ipcMain.handle(IPC.mediaSave, (_e, id: string, file: string) => media.saveToDefault(id, file))
