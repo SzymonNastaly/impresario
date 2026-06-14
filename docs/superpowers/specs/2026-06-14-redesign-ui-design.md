@@ -18,6 +18,15 @@ and provides a reference-files area gated by model capability.
 - No data-model or model-id changes (Spec A).
 - No fal wiring of attachments.
 
+## Carryover from Spec A
+
+- The existing per-generation delete handler (`generations:delete`) removes a
+  generation + its media but not its (now) parent conversation, which can leave
+  an empty conversation row. Spec B's sidebar deletes whole conversations
+  (`conversations:delete`, which cascades correctly), so it should own this:
+  drop the legacy per-generation delete path, or delete the conversation when
+  its last turn is removed.
+
 ## B1. Overall layout (full replacement)
 
 Replaces the current output-on-top / prompt-at-bottom layout with a top bar plus
