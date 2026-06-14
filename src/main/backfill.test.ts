@@ -62,3 +62,19 @@ test('truncates long prompts to 80 chars for the title', () => {
   }
   expect(row.title.length).toBe(80)
 })
+
+test('does not crash when a conversation row already exists for a legacy generation', () => {
+  sqlite
+    .prepare('INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)')
+    .run('g1', 'partial', 1000, 1000)
+  insertLegacyGeneration('g1', 'hello world')
+
+  expect(() => backfillConversations(sqlite)).not.toThrow()
+
+  const convos = sqlite.prepare('SELECT id FROM conversations WHERE id = ?').all('g1')
+  expect(convos.length).toBe(1)
+  const gen = sqlite.prepare('SELECT conversation_id FROM generations WHERE id = ?').get('g1') as {
+    conversation_id: string
+  }
+  expect(gen.conversation_id).toBe('g1')
+})
