@@ -93,29 +93,121 @@ export interface KeyStatus {
   encryptionAvailable: boolean
 }
 
-/** A curated default set of fal models to start with. */
-export const DEFAULT_IMAGE_MODELS = [
-  { id: 'fal-ai/flux-2/flash', label: 'FLUX.2 Flash' },
-  { id: 'fal-ai/nano-banana-2', label: 'Nano Banana 2' },
-  { id: 'openai/gpt-image-2', label: 'GPT Image 2' },
-  { id: 'fal-ai/recraft/v4/text-to-image', label: 'Recraft V4' }
-] as const
+/** Static, user-facing metadata for a model the app offers. */
+export interface ModelInfo {
+  id: string
+  label: string
+  kind: GenerationType
+  /** Strength / best-for chips shown in the selector. */
+  tags: string[]
+  speed: 'fast' | 'medium' | 'slow'
+  /** Relative cost: 1 = $, 2 = $$, 3 = $$$. */
+  cost: 1 | 2 | 3
+  /** Whether the model accepts reference-file inputs (gates the UI in Spec B). */
+  acceptsReferenceFiles: boolean
+  /** Max output duration in seconds, for video models. */
+  maxDurationSec?: number
+}
+
+/** A curated default set of fal image models to start with. */
+export const DEFAULT_IMAGE_MODELS: ModelInfo[] = [
+  {
+    id: 'fal-ai/flux-2/flash',
+    label: 'FLUX.2 Flash',
+    kind: 'image',
+    tags: ['Fast drafts', 'Concept art'],
+    speed: 'fast',
+    cost: 1,
+    acceptsReferenceFiles: false
+  },
+  {
+    id: 'fal-ai/nano-banana-2',
+    label: 'Nano Banana 2',
+    kind: 'image',
+    tags: ['Balanced', 'Versatile'],
+    speed: 'fast',
+    cost: 1,
+    acceptsReferenceFiles: false
+  },
+  {
+    id: 'openai/gpt-image-2',
+    label: 'GPT Image 2',
+    kind: 'image',
+    tags: ['Text in images', 'Prompt accuracy'],
+    speed: 'medium',
+    cost: 3,
+    acceptsReferenceFiles: false
+  },
+  {
+    id: 'fal-ai/recraft/v4/text-to-image',
+    label: 'Recraft V4',
+    kind: 'image',
+    tags: ['Logos & vectors', 'Design'],
+    speed: 'medium',
+    cost: 2,
+    acceptsReferenceFiles: false
+  }
+]
 
 export const DEFAULT_IMAGE_MODEL = DEFAULT_IMAGE_MODELS[0].id
 
 /** A curated default set of fal video models to start with. */
-export const DEFAULT_VIDEO_MODELS = [
-  { id: 'fal-ai/veo3/fast', label: 'Veo 3 Fast' },
-  { id: 'fal-ai/kling-video/v2/master/text-to-video', label: 'Kling 2 Master' },
-  { id: 'fal-ai/minimax/hailuo-02/standard/text-to-video', label: 'Hailuo 02' },
-  { id: 'fal-ai/luma-dream-machine', label: 'Luma Dream Machine' }
-] as const
+export const DEFAULT_VIDEO_MODELS: ModelInfo[] = [
+  {
+    id: 'fal-ai/veo3/fast',
+    label: 'Veo 3 Fast',
+    kind: 'video',
+    tags: ['Cinematic', 'With audio'],
+    speed: 'medium',
+    cost: 3,
+    acceptsReferenceFiles: false,
+    maxDurationSec: 8
+  },
+  {
+    id: 'fal-ai/kling-video/v2/master/text-to-video',
+    label: 'Kling 2 Master',
+    kind: 'video',
+    tags: ['Smooth motion', 'Detailed'],
+    speed: 'slow',
+    cost: 3,
+    acceptsReferenceFiles: false,
+    maxDurationSec: 10
+  },
+  {
+    id: 'fal-ai/minimax/hailuo-02/standard/text-to-video',
+    label: 'Hailuo 02',
+    kind: 'video',
+    tags: ['Expressive', 'Affordable'],
+    speed: 'medium',
+    cost: 2,
+    acceptsReferenceFiles: false,
+    maxDurationSec: 6
+  },
+  {
+    id: 'fal-ai/luma-dream-machine',
+    label: 'Luma Dream Machine',
+    kind: 'video',
+    tags: ['Dreamy', 'Fast'],
+    speed: 'fast',
+    cost: 2,
+    acceptsReferenceFiles: false,
+    maxDurationSec: 5
+  }
+]
 
 export const DEFAULT_VIDEO_MODEL = DEFAULT_VIDEO_MODELS[0].id
 
+/** Every model the app offers, both kinds. */
+export const ALL_MODELS: ModelInfo[] = [...DEFAULT_IMAGE_MODELS, ...DEFAULT_VIDEO_MODELS]
+
+/** Look up a model's metadata by id. */
+export function modelInfo(id: string): ModelInfo | undefined {
+  return ALL_MODELS.find((m) => m.id === id)
+}
+
 /** Which generation kind a model id belongs to (defaults to image). */
 export function modelKind(id: string): GenerationType {
-  return DEFAULT_VIDEO_MODELS.some((m) => m.id === id) ? 'video' : 'image'
+  return modelInfo(id)?.kind ?? 'image'
 }
 
 /** IPC channel names — single source of truth for both sides of the bridge. */
