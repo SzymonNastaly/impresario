@@ -76,10 +76,6 @@ export function updateGeneration(id: string, patch: GenerationPatch): Generation
     .get() as Generation | undefined
 }
 
-export function deleteGeneration(id: string): void {
-  db.delete(generations).where(eq(generations.id, id)).run()
-}
-
 export function getGenerationsByConversation(conversationId: string): Generation[] {
   return db
     .select()

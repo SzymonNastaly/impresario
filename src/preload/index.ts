@@ -13,7 +13,6 @@ const api: ImpresarioApi = {
   },
   generations: {
     getAll: () => ipcRenderer.invoke(IPC.generationsGetAll),
-    delete: (id) => ipcRenderer.invoke(IPC.generationsDelete, id),
     onChanged: (callback) => {
       const listener = (): void => callback()
       ipcRenderer.on(IPC.generationsChanged, listener)

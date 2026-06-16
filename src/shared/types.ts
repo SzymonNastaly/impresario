@@ -22,6 +22,13 @@ export interface Attachment {
   contentType: string
 }
 
+/** A reference-file input captured in the renderer and sent with a request. */
+export interface ReferenceFileInput {
+  /** Raw bytes (structured-clone-safe across the IPC bridge). */
+  bytes: ArrayBuffer
+  contentType: string
+}
+
 export interface Generation {
   id: string
   /** Parent conversation (turn ordering is by createdAt). */
@@ -49,6 +56,8 @@ export interface GenerateImageRequest {
   numberOfImages?: number
   /** Size hint passed to the adapter, e.g. "1024x1024". */
   size?: string
+  /** Reference-file inputs; persisted onto the generation, not sent to fal. */
+  referenceFiles?: ReferenceFileInput[]
 }
 
 export interface GenerateVideoRequest {
@@ -61,6 +70,8 @@ export interface GenerateVideoRequest {
   size?: string
   /** Duration in seconds, if the model supports it. */
   duration?: number
+  /** Reference-file inputs; persisted onto the generation, not sent to fal. */
+  referenceFiles?: ReferenceFileInput[]
 }
 
 // ---- Templates ----------------------------------------------------------
@@ -255,7 +266,6 @@ export const IPC = {
   settingsClearKey: 'settings:clear-key',
   // generations
   generationsGetAll: 'generations:get-all',
-  generationsDelete: 'generations:delete',
   generateImage: 'generate:image',
   generateVideo: 'generate:video',
   // main -> renderer broadcast when the store changes

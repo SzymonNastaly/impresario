@@ -26,7 +26,6 @@ export interface ImpresarioApi {
   }
   generations: {
     getAll(): Promise<Generation[]>
-    delete(id: string): Promise<void>
     /** Subscribe to store changes. Returns an unsubscribe function. */
     onChanged(callback: () => void): () => void
   }
