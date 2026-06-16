@@ -5,11 +5,13 @@ import {
   IPC,
   DEFAULT_IMAGE_MODEL,
   DEFAULT_VIDEO_MODEL,
+  type Attachment,
   type Conversation,
   type ConversationCreate,
   type Generation,
   type GenerateImageRequest,
   type GenerateVideoRequest,
+  type ReferenceFileInput,
   type Template,
   type TemplateCreate,
   type TemplateUpdate
@@ -54,6 +56,19 @@ function resolveConversationId(prompt: string, conversationId?: string): string 
   return createConversation({ title: prompt.slice(0, 80) }).id
 }
 
+/** Persist reference-file inputs under the generation and return their metadata. */
+function saveReferenceFiles(generationId: string, files?: ReferenceFileInput[]): Attachment[] {
+  return (files ?? []).map((f, i) =>
+    storage.saveInputAsset(generationId, i, Buffer.from(f.bytes), f.contentType)
+  )
+}
+
+/** Bump a conversation's updatedAt so the sidebar reflects last activity. */
+function touchConversation(id: string): void {
+  db.updateConversation(id, {})
+  broadcastConversationsChanged()
+}
+
 function broadcastTemplatesChanged(): void {
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) win.webContents.send(IPC.templatesChanged)
@@ -96,9 +111,11 @@ function startImageGeneration(req: GenerateImageRequest): { id: string; conversa
   if (!prompt) throw new Error('Prompt is required.')
 
   const conversationId = resolveConversationId(prompt, req.conversationId)
+  const id = randomUUID()
+  const attachments = saveReferenceFiles(id, req.referenceFiles)
   const now = Date.now()
   const gen: Generation = {
-    id: randomUUID(),
+    id,
     conversationId,
     type: 'image',
     prompt,
@@ -109,13 +126,14 @@ function startImageGeneration(req: GenerateImageRequest): { id: string; conversa
       ...(req.size ? { size: req.size } : {})
     },
     assets: [],
-    attachments: [],
+    attachments,
     error: null,
     createdAt: now,
     updatedAt: now
   }
 
   db.insertGeneration(gen)
+  touchConversation(conversationId)
   broadcastGenerationsChanged()
 
   // Fire-and-forget: the renderer tracks progress via the change broadcast.
@@ -180,9 +198,11 @@ function startVideoGeneration(req: GenerateVideoRequest): { id: string; conversa
   if (!prompt) throw new Error('Prompt is required.')
 
   const conversationId = resolveConversationId(prompt, req.conversationId)
+  const id = randomUUID()
+  const attachments = saveReferenceFiles(id, req.referenceFiles)
   const now = Date.now()
   const gen: Generation = {
-    id: randomUUID(),
+    id,
     conversationId,
     type: 'video',
     prompt,
@@ -193,14 +213,14 @@ function startVideoGeneration(req: GenerateVideoRequest): { id: string; conversa
       ...(req.duration ? { duration: req.duration } : {})
     },
     assets: [],
-    attachments: [],
+    attachments,
     error: null,
     createdAt: now,
     updatedAt: now
   }
 
   db.insertGeneration(gen)
-  broadcastGenerationsChanged()
+  touchConversation(conversationId)
   runVideoGeneration(gen, { ...req, prompt })
   return { id: gen.id, conversationId }
 }
