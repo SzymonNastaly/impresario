@@ -78,6 +78,11 @@ function App(): React.JSX.Element {
     textareaRef.current?.focus()
   }
 
+  function changeModel(id: string): void {
+    setModel(id)
+    if (!acceptsReferenceFiles(id)) setReferenceFiles([])
+  }
+
   function applyTemplate(tpl: Template): void {
     setPrompt(tpl.config.prompt)
     setModel(tpl.config.model)
@@ -145,7 +150,7 @@ function App(): React.JSX.Element {
 
       <div className="grid min-h-0 flex-1 grid-cols-[320px_1fr] gap-px bg-border">
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto bg-background p-4">
-          <ModelSelector model={model} onModelChange={setModel} />
+          <ModelSelector model={model} onModelChange={changeModel} />
           <ReferenceFiles
             model={model}
             files={referenceFiles}
