@@ -221,6 +221,7 @@ function startVideoGeneration(req: GenerateVideoRequest): { id: string; conversa
 
   db.insertGeneration(gen)
   touchConversation(conversationId)
+  broadcastGenerationsChanged()
   runVideoGeneration(gen, { ...req, prompt })
   return { id: gen.id, conversationId }
 }
