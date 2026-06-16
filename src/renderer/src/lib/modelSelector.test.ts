@@ -9,12 +9,16 @@ import { acceptsReferenceFiles, modelsForKind, speedCostLabel } from './modelSel
 
 describe('modelSelector', () => {
   test('modelsForKind returns only models of that kind', () => {
-    expect(modelsForKind('image').map((m) => m.id).sort()).toEqual(
-      DEFAULT_IMAGE_MODELS.map((m) => m.id).sort()
-    )
-    expect(modelsForKind('video').map((m) => m.id).sort()).toEqual(
-      DEFAULT_VIDEO_MODELS.map((m) => m.id).sort()
-    )
+    expect(
+      modelsForKind('image')
+        .map((m) => m.id)
+        .sort()
+    ).toEqual(DEFAULT_IMAGE_MODELS.map((m) => m.id).sort())
+    expect(
+      modelsForKind('video')
+        .map((m) => m.id)
+        .sort()
+    ).toEqual(DEFAULT_VIDEO_MODELS.map((m) => m.id).sort())
   })
 
   test('speedCostLabel formats speed + cost dollars', () => {

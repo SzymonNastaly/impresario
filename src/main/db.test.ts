@@ -66,7 +66,9 @@ test('deleteConversation cascades to its generations and returns their ids', () 
 test('insertGeneration round-trips attachments', () => {
   db.insertConversation({ id: 'c1', title: 'c', createdAt: 1, updatedAt: 1 })
   const g = makeGeneration('g1', 'c1')
-  g.attachments = [{ fileName: '0.png', url: 'media://asset/g1/input/0.png', contentType: 'image/png' }]
+  g.attachments = [
+    { fileName: '0.png', url: 'media://asset/g1/input/0.png', contentType: 'image/png' }
+  ]
   db.insertGeneration(g)
   expect(db.getGeneration('g1')?.attachments).toEqual(g.attachments)
 })

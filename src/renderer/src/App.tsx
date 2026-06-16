@@ -174,7 +174,10 @@ function App(): React.JSX.Element {
 
       {sidebarOpen && (
         <>
-          <div className="absolute inset-0 z-10 bg-black/30" onClick={() => setSidebarOpen(false)} />
+          <div
+            className="absolute inset-0 z-10 bg-black/30"
+            onClick={() => setSidebarOpen(false)}
+          />
           <div className="absolute inset-y-0 left-0 z-20">
             <Sidebar
               conversations={conversations}

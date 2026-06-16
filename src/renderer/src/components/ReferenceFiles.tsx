@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import { acceptsReferenceFiles } from '../lib/modelSelector'
 import { cn } from '../lib/utils'
@@ -19,19 +19,15 @@ export function ReferenceFiles({
 }: ReferenceFilesProps): React.JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
-  const [previews, setPreviews] = useState<string[]>([])
 
   // Object URLs for thumbnails; revoke on change/unmount to avoid leaks.
-  useEffect(() => {
-    const urls = files.map((f) => URL.createObjectURL(f))
-    setPreviews(urls)
-    return () => urls.forEach((u) => URL.revokeObjectURL(u))
-  }, [files])
+  const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files])
+  useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews])
 
   if (!acceptsReferenceFiles(model)) {
     return (
       <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-[13px] text-muted-foreground">
-        This model doesn't accept reference files.
+        This model doesn’t accept reference files.
       </div>
     )
   }
