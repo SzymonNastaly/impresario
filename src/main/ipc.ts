@@ -309,11 +309,6 @@ export function registerIpcHandlers(): void {
 
   // generations
   ipcMain.handle(IPC.generationsGetAll, () => db.getAllGenerations())
-  ipcMain.handle(IPC.generationsDelete, (_e, id: string) => {
-    db.deleteGeneration(id)
-    storage.deleteGenerationMedia(id)
-    broadcastGenerationsChanged()
-  })
   ipcMain.handle(IPC.generateImage, (_e, req: GenerateImageRequest) => startImageGeneration(req))
   ipcMain.handle(IPC.generateVideo, (_e, req: GenerateVideoRequest) => startVideoGeneration(req))
 

@@ -266,7 +266,6 @@ export const IPC = {
   settingsClearKey: 'settings:clear-key',
   // generations
   generationsGetAll: 'generations:get-all',
-  generationsDelete: 'generations:delete',
   generateImage: 'generate:image',
   generateVideo: 'generate:video',
   // main -> renderer broadcast when the store changes
