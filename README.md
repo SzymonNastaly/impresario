@@ -1,65 +1,71 @@
 # Impresario Studio
 
-A local-first desktop app for AI media generation — a ChatGPT-style interface
-optimized for images (and, in the future, video and voice). Everything lives on
-your device; the app only reaches out to an AI provider (currently
-[fal.ai](https://fal.ai)) at generation time. **Bring your own key.**
+**Impresario Studio is a desktop app for creating images with AI.** It feels
+like a chat: you describe the picture you want, press a button, and the app
+generates it for you. You can refine your idea over several messages, keep
+different projects in separate conversations, and revisit everything you've made
+later — all from your own computer.
 
-Built with Electron + electron-vite + React + TypeScript, with
-[TanStack AI](https://tanstack.com/ai) for generation, SQLite (better-sqlite3)
-for persistence, and [TanStack DB](https://tanstack.com/db) for a reactive UI.
+Your work stays on your device. The app only talks to the AI service when you
+ask it to generate something, and you use your own account to do so (see
+[Before you start](#before-you-start)).
 
-## Architecture
+<!-- Screenshot: the main window with a conversation and generated images -->
+<!-- ![Impresario Studio main window](docs/screenshots/main-window.png) -->
 
-```
-┌──────────────────────────── Renderer (React) ────────────────────────────┐
-│  PromptBar · ResultView · Sidebar · SettingsModal                         │
-│  TanStack DB collection (read-mirror, live queries)                       │
-└──────────────▲───────────────────────────────────┬───────────────────────┘
-               │ generations:changed (broadcast)    │ window.api.* (IPC)
-┌──────────────┴───────────────────────────────────▼───────────────────────┐
-│  Main process (Node, trusted)                                             │
-│   • SQLite (source of truth)      src/main/db.ts                          │
-│   • fal.ai key in OS keychain     src/main/keychain.ts  (safeStorage)     │
-│   • generation via TanStack AI    src/main/generate.ts                    │
-│   • media blobs on disk + media:// protocol   src/main/storage.ts         │
-│   • IPC handlers + lifecycle      src/main/ipc.ts                         │
-└───────────────────────────────────────────────────────────────────────────┘
-```
+## What you can do
 
-Key design decisions:
+- **Generate images from a description.** Type what you want to see and the app
+  creates it.
+- **Have a conversation.** Keep refining in follow-up messages — ask for
+  changes, variations, or a different style.
+- **Organize your work.** Each idea lives in its own conversation in the
+  sidebar, which you can rename or delete.
+- **Use reference images.** Attach your own images to guide a generation.
+- **Choose a model.** Pick which AI model to use for the look and quality you
+  want.
+- **Save templates.** Store prompts you use often and start from them with one
+  click.
+- **View full-size.** Click any image to open it large.
 
-- **Generation runs in the main process.** The fal.ai API key is stored
-  encrypted via Electron `safeStorage` and never enters the renderer.
-- **SQLite is the source of truth.** The renderer's TanStack DB collection is a
-  reactive mirror: it loads over IPC and re-syncs whenever the main process
-  broadcasts `generations:changed`. Writes go through `window.api`, not
-  collection mutation handlers.
-- **Metadata vs. blobs are split.** Generation metadata lives in SQLite; the
-  actual image bytes are written to `userData/media/<id>/` and served to the
-  renderer through the privileged `media://` protocol (no filesystem access in
-  the renderer).
+<!-- Screenshot: choosing a model and a template before generating -->
+<!-- ![Choosing a model and template](docs/screenshots/model-and-template.png) -->
 
-### Project layout
+## Before you start
 
-```
-src/
-├─ shared/            Types + IPC channel + API contract (all processes)
-│  ├─ types.ts
-│  └─ api.ts
-├─ main/              Node main process
-│  ├─ index.ts        Window, protocol registration, bootstrapping
-│  ├─ db.ts           better-sqlite3 store + migrations
-│  ├─ keychain.ts     safeStorage-backed BYOK key
-│  ├─ storage.ts      media files on disk + media:// protocol
-│  ├─ generate.ts     fal.ai via @tanstack/ai + @tanstack/ai-fal
-│  └─ ipc.ts          IPC handlers + generation lifecycle
-├─ preload/           contextBridge → typed window.api
-└─ renderer/src/      React UI
-   ├─ lib/generations.ts   TanStack DB collection bridged to SQLite
-   ├─ components/          Sidebar, PromptBar, ResultView, SettingsModal
-   └─ App.tsx
-```
+Impresario Studio uses [fal.ai](https://fal.ai) to generate images, and you
+bring your own key — that means you sign up with fal.ai and the app uses your
+account. To get set up:
+
+1. Create a free account at [fal.ai](https://fal.ai).
+2. Copy an API key from <https://fal.ai/dashboard/keys>.
+3. Open the app, click **Settings (⚙)**, and paste your key.
+
+Your key is stored securely on your computer and is never shared with anyone but
+fal.ai.
+
+<!-- Screenshot: the Settings window where you paste your key -->
+<!-- ![Settings window](docs/screenshots/settings.png) -->
+
+## How to use it
+
+1. **Start a conversation** — the app opens ready for a new one.
+2. **Describe what you want** in the text box at the bottom (for example,
+   "a watercolor fox sitting in a snowy forest").
+3. *(Optional)* Pick a **model**, attach a **reference image**, or start from a
+   **template**.
+4. **Press Generate** and wait a few moments for your image to appear.
+5. **Keep going** — send another message to refine the result, or start a new
+   conversation in the sidebar for a different idea.
+6. **Click an image** to view it full-size.
+
+<!-- Screenshot: a refined result after a few follow-up messages -->
+<!-- ![Refining a result](docs/screenshots/refining.png) -->
+
+---
+
+The rest of this document is for developers who want to run or modify the app.
+
 
 ## Getting started
 
@@ -80,22 +86,3 @@ On first launch, open **Settings (⚙)** and paste a fal.ai API key from
 | `pnpm start`                         | Preview the production build        |
 | `pnpm typecheck`                     | Typecheck main/preload and renderer |
 | `pnpm build:mac` / `:win` / `:linux` | Package a distributable             |
-
-## Notes & gotchas
-
-- **Native module rebuild.** `better-sqlite3` is a native module. The
-  `postinstall` script (`electron-builder install-app-deps`) rebuilds it against
-  Electron's ABI. If you ever hit a `NODE_MODULE_VERSION` mismatch, run
-  `pnpm exec electron-builder install-app-deps`.
-- **ESM-only AI packages.** `@tanstack/ai` and `@tanstack/ai-fal` are ESM-only,
-  so they're bundled into the (CommonJS) main process via an `exclude` on
-  `externalizeDepsPlugin` in `electron.vite.config.ts` rather than externalized.
-- **Stored data location** (`userData`): `impresario.db` (SQLite), `media/`
-  (image files), `fal.key` (encrypted key). On macOS:
-  `~/Library/Application Support/impresario-studio/`.
-
-## Roadmap ideas
-
-- Video generation (`generateVideo`) — reuse the same queued-job lifecycle.
-- Voice/speech (`generateSpeech`).
-- Per-generation cost/usage display, model parameter controls, image export.
