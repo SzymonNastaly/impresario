@@ -86,3 +86,7 @@ On first launch, open **Settings (⚙)** and paste a fal.ai API key from
 | `pnpm start`                         | Preview the production build        |
 | `pnpm typecheck`                     | Typecheck main/preload and renderer |
 | `pnpm build:mac` / `:win` / `:linux` | Package a distributable             |
+
+## License
+
+[MIT](LICENSE) © Szymon Nastaly
