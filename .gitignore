@@ -4,3 +4,7 @@ out
 .DS_Store
 .eslintcache
 *.log*
+
+# Local signing/notarization secrets — never commit
+scripts/release-env.sh
+*.p8
