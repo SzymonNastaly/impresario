@@ -232,8 +232,8 @@ export const DEFAULT_VIDEO_MODELS: ModelInfo[] = [
     maxDurationSec: 6
   },
   {
-    id: 'fal-ai/luma-dream-machine',
-    label: 'Luma Dream Machine',
+    id: 'fal-ai/luma-dream-machine/ray-2',
+    label: 'Luma Ray 2',
     kind: 'video',
     tags: ['Dreamy', 'Fast'],
     speed: 'fast',

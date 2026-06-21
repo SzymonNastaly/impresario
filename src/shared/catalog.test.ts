@@ -154,6 +154,14 @@ describe('searchFamiliesIn', () => {
       'fal-ai/flux-2/flash'
     ])
   })
+
+  test('matches on a variant description', () => {
+    // "wan t2v" / "wan i2v" live only in the catalog description, not the label.
+    expect(searchFamiliesIn(fams, 'video', 't2v').map((f) => f.id)).toEqual(['Wan 2.7'])
+    expect(searchFamiliesIn(fams, 'image', 'fast flux').map((f) => f.id)).toEqual([
+      'fal-ai/flux-2/flash'
+    ])
+  })
 })
 
 describe('endpointInfoFrom', () => {

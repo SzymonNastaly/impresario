@@ -23,6 +23,7 @@ export interface Variant {
   outputKind: OutputKind
   subLabel: string
   acceptsReferenceFiles: boolean
+  description: string
   overlay?: ModelInfo
 }
 
@@ -59,6 +60,7 @@ export function buildFamilies(models: CatalogModel[], overlays: ModelInfo[]): Fa
       outputKind: m.outputKind,
       subLabel: modality.subLabel,
       acceptsReferenceFiles: overlayById.get(m.id)?.acceptsReferenceFiles ?? modality.acceptsReferenceFiles,
+      description: m.description,
       overlay: overlayById.get(m.id)
     })
   }
@@ -127,6 +129,7 @@ export function searchFamiliesIn(source: Family[], kind: GenerationType, query: 
     return f.variants.some(
       (v) =>
         v.endpointId.toLowerCase().includes(q) ||
+        v.description.toLowerCase().includes(q) ||
         (v.overlay?.label ?? '').toLowerCase().includes(q)
     )
   })
