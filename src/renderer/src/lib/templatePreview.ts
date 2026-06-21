@@ -1,4 +1,5 @@
-import { modelInfo, type Template } from '@shared/types'
+import type { Template } from '@shared/types'
+import { modelInfo } from '@shared/catalog'
 
 export interface TemplateRow {
   name: string

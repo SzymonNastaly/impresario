@@ -1,11 +1,18 @@
 import {
   DEFAULT_IMAGE_MODEL,
+  DEFAULT_IMAGE_MODELS,
   DEFAULT_VIDEO_MODEL,
-  modelKind,
+  DEFAULT_VIDEO_MODELS,
   type GenerationType
 } from '@shared/types'
-import { modelsForKind, speedCostLabel } from '../lib/modelSelector'
+import { modelKind } from '@shared/catalog'
+import { speedCostLabel } from '../lib/modelSelector'
 import { cn } from '../lib/utils'
+
+/** Curated models of a given kind, in registry order. */
+function modelsForKind(kind: GenerationType): typeof DEFAULT_IMAGE_MODELS {
+  return kind === 'video' ? DEFAULT_VIDEO_MODELS : DEFAULT_IMAGE_MODELS
+}
 
 interface ModelSelectorProps {
   model: string

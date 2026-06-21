@@ -245,19 +245,6 @@ export const DEFAULT_VIDEO_MODELS: ModelInfo[] = [
 
 export const DEFAULT_VIDEO_MODEL = DEFAULT_VIDEO_MODELS[0].id
 
-/** Every model the app offers, both kinds. */
-export const ALL_MODELS: ModelInfo[] = [...DEFAULT_IMAGE_MODELS, ...DEFAULT_VIDEO_MODELS]
-
-/** Look up a model's metadata by id. */
-export function modelInfo(id: string): ModelInfo | undefined {
-  return ALL_MODELS.find((m) => m.id === id)
-}
-
-/** Which generation kind a model id belongs to (defaults to image). */
-export function modelKind(id: string): GenerationType {
-  return modelInfo(id)?.kind ?? 'image'
-}
-
 /** IPC channel names — single source of truth for both sides of the bridge. */
 export const IPC = {
   // settings / BYOK

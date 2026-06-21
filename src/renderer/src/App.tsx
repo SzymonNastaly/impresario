@@ -3,12 +3,12 @@ import { useLiveQuery } from '@tanstack/react-db'
 import { PanelLeft, Plus, Settings } from 'lucide-react'
 import {
   DEFAULT_IMAGE_MODEL,
-  modelKind,
   type GenerateImageRequest,
   type GenerateVideoRequest,
   type ReferenceFileInput,
   type Template
 } from '@shared/types'
+import { modelKind } from '@shared/catalog'
 import { generationsCollection } from './lib/generations'
 import { conversationsCollection } from './lib/conversations'
 import { templatesCollection } from './lib/templates'
