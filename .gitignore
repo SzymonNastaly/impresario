@@ -4,6 +4,7 @@ out
 .DS_Store
 .eslintcache
 *.log*
+*.tsbuildinfo
 
 # Local signing/notarization secrets — never commit
 scripts/release-env.sh

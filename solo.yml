@@ -1,0 +1,32 @@
+# Visit https://soloterm.com to learn more
+name: impresario-studio
+icon: null
+processes:
+  pnpm:test:
+    command: pnpm run test
+    working_dir: null
+    auto_start: false
+    auto_restart: false
+    restart_when_changed: []
+    env: {}
+  pnpm:build:
+    command: pnpm run build
+    working_dir: null
+    auto_start: false
+    auto_restart: false
+    restart_when_changed: []
+    env: {}
+  pnpm:dev:
+    command: pnpm run dev
+    working_dir: null
+    auto_start: true
+    auto_restart: false
+    restart_when_changed: []
+    env: {}
+  pnpm:start:
+    command: pnpm run start
+    working_dir: null
+    auto_start: true
+    auto_restart: false
+    restart_when_changed: []
+    env: {}
