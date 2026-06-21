@@ -35,7 +35,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full min-h-0 w-[264px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl">
+    <aside className="flex h-full min-h-0 w-[264px] flex-col border-r border-border bg-sidebar text-sidebar-foreground">
       <div className="flex items-center px-4 pt-4 pb-3">
         <span className="font-heading font-semibold tracking-tight">Chats</span>
       </div>

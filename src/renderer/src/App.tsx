@@ -24,6 +24,7 @@ import { OutputFeed } from './components/OutputFeed'
 import { SettingsModal } from './components/SettingsModal'
 import { TemplateEditorModal } from './components/TemplateEditorModal'
 import { Button } from './components/ui/button'
+import { cn } from './lib/utils'
 import { useKeyStatus } from './hooks/useKeyStatus'
 
 /** Read each File into a structured-clone-safe payload for the IPC bridge. */
@@ -80,7 +81,6 @@ function App(): React.JSX.Element {
     setPrompt('')
     setParams({})
     setReferenceFiles([])
-    setSidebarOpen(false)
     textareaRef.current?.focus()
   }
 
@@ -143,7 +143,7 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <div className="relative flex h-full flex-col">
+    <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         <Button variant="ghost" size="sm" onClick={() => setSidebarOpen((v) => !v)}>
           <PanelLeft />
@@ -173,61 +173,57 @@ function App(): React.JSX.Element {
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[320px_1fr] gap-px bg-border">
-        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto bg-background p-4">
-          <ModelSelector
-            model={model}
-            onModelChange={changeModel}
-            favorites={favorites}
-            onToggleFavorite={toggleFavorite}
-          />
-          <ReferenceFiles
-            model={model}
-            files={referenceFiles}
-            onAdd={(added) => setReferenceFiles((prev) => [...prev, ...added])}
-            onRemove={(i) => setReferenceFiles((prev) => prev.filter((_, idx) => idx !== i))}
+      <div className="flex min-h-0 flex-1">
+        <div
+          className={cn(
+            'min-h-0 shrink-0 overflow-hidden transition-[width] duration-200 ease-out',
+            sidebarOpen ? 'w-[264px]' : 'w-0'
+          )}
+        >
+          <Sidebar
+            conversations={conversations}
+            activeId={activeConversationId}
+            onSelect={setActiveConversationId}
+            onDelete={(id) => void handleDeleteConversation(id)}
+            onRename={handleRenameConversation}
           />
         </div>
 
-        <div className="flex min-h-0 flex-col gap-3 bg-background p-4">
-          <VariantSelector model={model} onModelChange={changeModel} />
-          <TemplateSelector
-            templates={templates}
-            onApply={applyTemplate}
-            onManage={() => setTemplatesOpen(true)}
-          />
-          <TextBox
-            kind={kind}
-            prompt={prompt}
-            canSubmit={prompt.trim().length > 0}
-            onPromptChange={setPrompt}
-            onSubmit={() => void submit()}
-            textareaRef={textareaRef}
-          />
-          <OutputFeed turns={turns} />
-        </div>
-      </div>
-
-      {sidebarOpen && (
-        <>
-          <div
-            className="absolute inset-0 z-10 bg-black/30"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="absolute inset-y-0 left-0 z-20">
-            <Sidebar
-              conversations={conversations}
-              activeId={activeConversationId}
-              onSelect={(id) => {
-                setActiveConversationId(id)
-                setSidebarOpen(false)
-              }}
-              onDelete={(id) => void handleDeleteConversation(id)}
-              onRename={handleRenameConversation}
+        <div className="grid min-h-0 flex-1 grid-cols-[320px_1fr] gap-px bg-border">
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto bg-background p-4">
+            <ModelSelector
+              model={model}
+              onModelChange={changeModel}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+            />
+            <ReferenceFiles
+              model={model}
+              files={referenceFiles}
+              onAdd={(added) => setReferenceFiles((prev) => [...prev, ...added])}
+              onRemove={(i) => setReferenceFiles((prev) => prev.filter((_, idx) => idx !== i))}
             />
           </div>
-        </>
-      )}
+
+          <div className="flex min-h-0 flex-col gap-3 bg-background p-4">
+            <VariantSelector model={model} onModelChange={changeModel} />
+            <TemplateSelector
+              templates={templates}
+              onApply={applyTemplate}
+              onManage={() => setTemplatesOpen(true)}
+            />
+            <TextBox
+              kind={kind}
+              prompt={prompt}
+              canSubmit={prompt.trim().length > 0}
+              onPromptChange={setPrompt}
+              onSubmit={() => void submit()}
+              textareaRef={textareaRef}
+            />
+            <OutputFeed turns={turns} />
+          </div>
+        </div>
+      </div>
 
       <SettingsModal
         open={settingsOpen}
