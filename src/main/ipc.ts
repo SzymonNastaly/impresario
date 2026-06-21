@@ -350,6 +350,13 @@ export function registerIpcHandlers(): void {
     return filePaths[0]
   })
 
+  // settings: favorite model families
+  ipcMain.handle(IPC.settingsGetFavorites, () => settings.getFavorites())
+  ipcMain.handle(IPC.settingsSetFavorites, (_e, ids: string[]) => {
+    settings.setFavorites(ids)
+    return ids
+  })
+
   // templates
   ipcMain.handle(IPC.templatesGetAll, () => db.getAllTemplates())
   ipcMain.handle(IPC.templatesCreate, (_e, input: TemplateCreate) => createTemplate(input))

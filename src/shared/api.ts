@@ -23,6 +23,10 @@ export interface ImpresarioApi {
     getSaveDir(): Promise<string | null>
     /** Prompt for a folder and remember it; returns the chosen (or current) dir. */
     setSaveDir(): Promise<string | null>
+    /** Favorite model family ids. */
+    getFavorites(): Promise<string[]>
+    /** Persist the favorite family ids; returns the saved list. */
+    setFavorites(ids: string[]): Promise<string[]>
   }
   generations: {
     getAll(): Promise<Generation[]>

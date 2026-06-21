@@ -1,14 +1,14 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from '@tanstack/react-db'
 import { PanelLeft, Plus, Settings } from 'lucide-react'
 import {
   DEFAULT_IMAGE_MODEL,
-  modelKind,
   type GenerateImageRequest,
   type GenerateVideoRequest,
   type ReferenceFileInput,
   type Template
 } from '@shared/types'
+import { modelKind } from '@shared/catalog'
 import { generationsCollection } from './lib/generations'
 import { conversationsCollection } from './lib/conversations'
 import { templatesCollection } from './lib/templates'
@@ -16,6 +16,7 @@ import { conversationTurns } from './lib/turns'
 import { acceptsReferenceFiles } from './lib/modelSelector'
 import { Sidebar } from './components/Sidebar'
 import { ModelSelector } from './components/ModelSelector'
+import { VariantSelector } from './components/VariantSelector'
 import { ReferenceFiles } from './components/ReferenceFiles'
 import { TemplateSelector } from './components/TemplateSelector'
 import { TextBox } from './components/TextBox'
@@ -59,7 +60,12 @@ function App(): React.JSX.Element {
   const [referenceFiles, setReferenceFiles] = useState<File[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
+  const [favorites, setFavorites] = useState<string[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    void window.api.settings.getFavorites().then(setFavorites)
+  }, [])
 
   const { status, refresh } = useKeyStatus()
   const hasKey = status?.hasKey ?? false
@@ -81,6 +87,16 @@ function App(): React.JSX.Element {
   function changeModel(id: string): void {
     setModel(id)
     if (!acceptsReferenceFiles(id)) setReferenceFiles([])
+  }
+
+  function toggleFavorite(familyId: string): void {
+    setFavorites((prev) => {
+      const next = prev.includes(familyId)
+        ? prev.filter((id) => id !== familyId)
+        : [...prev, familyId]
+      void window.api.settings.setFavorites(next)
+      return next
+    })
   }
 
   function applyTemplate(tpl: Template): void {
@@ -159,7 +175,12 @@ function App(): React.JSX.Element {
 
       <div className="grid min-h-0 flex-1 grid-cols-[320px_1fr] gap-px bg-border">
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto bg-background p-4">
-          <ModelSelector model={model} onModelChange={changeModel} />
+          <ModelSelector
+            model={model}
+            onModelChange={changeModel}
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
+          />
           <ReferenceFiles
             model={model}
             files={referenceFiles}
@@ -169,6 +190,7 @@ function App(): React.JSX.Element {
         </div>
 
         <div className="flex min-h-0 flex-col gap-3 bg-background p-4">
+          <VariantSelector model={model} onModelChange={changeModel} />
           <TemplateSelector
             templates={templates}
             onApply={applyTemplate}

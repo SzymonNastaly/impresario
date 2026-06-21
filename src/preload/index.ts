@@ -9,7 +9,9 @@ const api: ImpresarioApi = {
     setKey: (key) => ipcRenderer.invoke(IPC.settingsSetKey, key),
     clearKey: () => ipcRenderer.invoke(IPC.settingsClearKey),
     getSaveDir: () => ipcRenderer.invoke(IPC.settingsGetSaveDir),
-    setSaveDir: () => ipcRenderer.invoke(IPC.settingsSetSaveDir)
+    setSaveDir: () => ipcRenderer.invoke(IPC.settingsSetSaveDir),
+    getFavorites: () => ipcRenderer.invoke(IPC.settingsGetFavorites),
+    setFavorites: (ids: string[]) => ipcRenderer.invoke(IPC.settingsSetFavorites, ids)
   },
   generations: {
     getAll: () => ipcRenderer.invoke(IPC.generationsGetAll),
