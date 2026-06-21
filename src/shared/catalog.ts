@@ -67,20 +67,31 @@ export function buildFamilies(models: CatalogModel[], overlays: ModelInfo[]): Fa
   return [...byFamily.values()]
 }
 
-/**
- * Append an id-tail suffix when two variants in a family share a sub-label.
- * The variant whose endpoint id ends exactly in its category (the canonical
- * one) keeps the plain sub-label; others are suffixed with the extra id
- * segment that distinguishes them (e.g. "turbo").
- */
+/** Make sub-labels unique within a family. For each group of variants that
+ *  share a sub-label, strip the group's common id-prefix and append the
+ *  remaining id segments — guaranteeing uniqueness (endpoint ids are unique),
+ *  with at most one variant (the shortest id) keeping the bare sub-label. */
 function disambiguateSubLabels(family: Family): void {
   const counts = new Map<string, number>()
   for (const v of family.variants) counts.set(v.subLabel, (counts.get(v.subLabel) ?? 0) + 1)
+
+  const groups = new Map<string, Variant[]>()
   for (const v of family.variants) {
-    if ((counts.get(v.subLabel) ?? 0) <= 1) continue
-    const tail = v.endpointId.split('/').pop() ?? ''
-    if (tail === v.category) continue
-    v.subLabel = `${v.subLabel} (${tail})`
+    if ((counts.get(v.subLabel) ?? 0) > 1) {
+      const g = groups.get(v.subLabel) ?? []
+      g.push(v)
+      groups.set(v.subLabel, g)
+    }
+  }
+
+  for (const group of groups.values()) {
+    const segs = group.map((v) => v.endpointId.split('/'))
+    let prefix = 0
+    while (segs.every((s) => prefix < s.length && s[prefix] === segs[0][prefix])) prefix++
+    for (let i = 0; i < group.length; i++) {
+      const suffix = segs[i].slice(prefix).join('/')
+      if (suffix) group[i].subLabel = `${group[i].subLabel} (${suffix})`
+    }
   }
 }
 

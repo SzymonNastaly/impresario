@@ -85,6 +85,39 @@ describe('buildFamilies', () => {
     const labels = i2v.map((v) => v.subLabel).sort()
     expect(labels).toEqual(['Image → Video', 'Image → Video (turbo)'])
   })
+
+  test('guarantees unique sub-labels for same-category variants', () => {
+    const fams = buildFamilies(
+      [
+        {
+          id: 'fal-ai/kling/v3/standard/image-to-video',
+          label: 'Kling Standard',
+          outputKind: 'video',
+          category: 'image-to-video',
+          modelFamily: 'Kling v3',
+          owner: 'fal-ai',
+          description: ''
+        },
+        {
+          id: 'fal-ai/kling/v3/pro/image-to-video',
+          label: 'Kling Pro',
+          outputKind: 'video',
+          category: 'image-to-video',
+          modelFamily: 'Kling v3',
+          owner: 'fal-ai',
+          description: ''
+        }
+      ],
+      []
+    )
+    const kling = fams.find((f) => f.id === 'Kling v3')!
+    const labels = kling.variants.map((v) => v.subLabel)
+    expect(new Set(labels).size).toBe(labels.length)
+    expect(labels.sort()).toEqual([
+      'Image → Video (pro/image-to-video)',
+      'Image → Video (standard/image-to-video)'
+    ])
+  })
 })
 
 describe('variantsForOutput / resolveVariant', () => {
