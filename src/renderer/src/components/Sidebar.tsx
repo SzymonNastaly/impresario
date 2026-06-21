@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Settings, X } from 'lucide-react'
+import { Pencil, X } from 'lucide-react'
 import type { Conversation } from '@shared/types'
 import { relativeTime } from '../lib/format'
 import { cn } from '../lib/utils'
@@ -12,7 +12,6 @@ interface SidebarProps {
   onSelect: (id: string) => void
   onDelete: (id: string) => void
   onRename: (id: string, title: string) => void
-  onOpenSettings: () => void
 }
 
 export function Sidebar({
@@ -20,8 +19,7 @@ export function Sidebar({
   activeId,
   onSelect,
   onDelete,
-  onRename,
-  onOpenSettings
+  onRename
 }: SidebarProps): React.JSX.Element {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -38,11 +36,8 @@ export function Sidebar({
 
   return (
     <aside className="flex h-full min-h-0 w-[264px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl">
-      <div className="flex items-center justify-between px-4 pt-4 pb-3">
+      <div className="flex items-center px-4 pt-4 pb-3">
         <span className="font-heading font-semibold tracking-tight">Chats</span>
-        <Button variant="ghost" size="icon" title="Settings" onClick={onOpenSettings}>
-          <Settings />
-        </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {conversations.length === 0 ? (

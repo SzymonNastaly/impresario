@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from '@tanstack/react-db'
-import { PanelLeft, Plus } from 'lucide-react'
+import { PanelLeft, Plus, Settings } from 'lucide-react'
 import {
   DEFAULT_IMAGE_MODEL,
   modelKind,
@@ -137,6 +137,15 @@ function App(): React.JSX.Element {
           <Plus />
           New chat
         </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Settings />
+          Settings
+        </Button>
       </div>
 
       {status && !hasKey && (
@@ -193,7 +202,6 @@ function App(): React.JSX.Element {
               }}
               onDelete={(id) => void handleDeleteConversation(id)}
               onRename={handleRenameConversation}
-              onOpenSettings={() => setSettingsOpen(true)}
             />
           </div>
         </>
