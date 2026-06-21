@@ -271,6 +271,9 @@ export const IPC = {
   // settings: save directory
   settingsGetSaveDir: 'settings:get-save-dir',
   settingsSetSaveDir: 'settings:set-save-dir',
+  // settings: favorite model families
+  settingsGetFavorites: 'settings:get-favorites',
+  settingsSetFavorites: 'settings:set-favorites',
   // templates
   templatesGetAll: 'templates:get-all',
   templatesCreate: 'templates:create',
